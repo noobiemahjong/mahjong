@@ -649,8 +649,8 @@ MainMenu → 在线（按钮为灰说明 Application.cloudProjectId 为空）
 
 本总结基于三份模块级精读笔记（保留在仓库中，供追溯行号级细节）：
 
-- [`notes/rule-engine.md`](notes/rule-engine.md)：规则引擎与算法（563 行，含主循环时序图、类关系图、8 亮点 + 8 改进点）
-- [`notes/networking.md`](notes/networking.md)：连接状态机、Lobby/Relay、基础设施（294 行，含状态机图）
-- [`notes/presentation.md`](notes/presentation.md)：表现层、UI、音频、配置、序列化（243 行）
+- [`rule-engine.md`](rule-engine.md)：规则引擎与算法（563 行，含主循环时序图、类关系图、8 亮点 + 8 改进点）
+- [`networking.md`](networking.md)：连接状态机、Lobby/Relay、基础设施（294 行，含状态机图）
+- [`presentation.md`](presentation.md)：表现层、UI、音频、配置、序列化（243 行）
 
 > 核对提示：文中行号对应当前工作区（commit `eb96e36`）；若后续改动，按类名/方法名检索即可。

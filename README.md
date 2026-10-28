@@ -6,21 +6,22 @@
 
 ## 文档
 
-- [设计稿 v1.0](docs/DESIGN.md)：架构、tick 引擎、会话流协议、全景回放、断线重连、部署与里程碑
-- [查表数据](docs/TABLES.md)：6 个 .bytes 的格式、来源、解码方法
-- [旧项目架构总结](docs/ARCHITECTURE-unity-legacy.md)：仅素材参考，不作为设计依据
-- [文档治理](docs/AGENTS.md) / [ADR 索引](docs/adr/README.md) / [里程碑](docs/milestones/README.md)
+- [目标设计 v1.0](docs/DESIGN.md)：架构、tick 引擎、会话流协议、全景回放、断线重连、部署与里程碑
+- [当前实现地图](docs/architecture.md)：M0 起随代码更新
+- [文档标准](docs/AGENTS.md)：tier、写作规则、预算、门禁
+- [Agent Notes](.agents/notes/README.md)：决策的 why、放弃的方案
+- [里程碑](docs/milestones/README.md) / [事故复盘](docs/postmortem/README.md)
+- [查表数据](docs/TABLES.md)
+- [旧项目资料](docs/legacy/README.md)：仅素材参考，不作为设计依据
 
 ## 治理
 
-- 共享指令：[AGENTS.md](AGENTS.md)
-- 文档规则：[docs/AGENTS.md](docs/AGENTS.md)
-- 设计基线：[docs/DESIGN.md](docs/DESIGN.md)
-- 决策索引：[docs/adr/README.md](docs/adr/README.md)
-- 工程坑与否决方案：[docs/engineering/](docs/engineering/README.md)
-- 里程碑：[docs/milestones/README.md](docs/milestones/README.md)
+- 共享规矩：[AGENTS.md](AGENTS.md)
+- 开发工作流：[docs/development.md](docs/development.md)
+- 文档标准：[docs/AGENTS.md](docs/AGENTS.md)
+- 决策记录：[.agents/notes/README.md](.agents/notes/README.md)
 
-> 治理与开发方式裁剪自 `E:/learn/Ursa-Server` 与 `E:/learn/Ursa-Client`；**不与旧 Unity 版做行为等价**，见 [ADR-002](docs/adr/002-文档治理裁取Ursa两仓.md)。
+> 治理与开发方式参考 Ursa-Server / Ursa-Client 与 DeepSeek Harness 的文档体系；**不与旧 Unity 版做行为等价**。
 
 ## 状态
 

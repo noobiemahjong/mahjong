@@ -3,8 +3,8 @@
 > 状态：**v1.0 基线**（D1–D18 已拍板，2026-10-28）
 > 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT）
 > 目标引擎：Godot 4.7.2（mono / .NET 10，与 Ursa-Client 同形态：net10.0 + NativeAOT）
-> 前置阅读：旧项目架构总结（同目录 `ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
-> 治理规则：仓库根 [AGENTS.md](../AGENTS.md) 与 [docs/AGENTS.md](AGENTS.md)
+> 前置阅读：旧项目资料（`legacy/ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
+> 治理：根 [AGENTS.md](../AGENTS.md) · 文档标准 [docs/AGENTS.md](AGENTS.md) · 当前实现 [architecture.md](architecture.md) · 决策 [.agents/notes/](../.agents/notes/README.md)
 > 本文档只写设计，不含实现代码。
 
 ---
@@ -36,7 +36,9 @@
 | D17 | Bot 基准 | 实现后实测基线，**M4 再定优化目标**（现在不拍数字） | 内容/算法 |
 | D18 | 移动端 | **完整实现之后再做**（旧项目本来就是移动端为主），但 v1 约束就要提前遵守 | 表现层/构建 |
 
-D1–D12 的推论：
+> 本表只保留结论；每条决策的 why、放弃的方案与后果见 [.agents/notes/](../.agents/notes/README.md)。
+
+D1–D18 的推论：
 
 - D1 决定了**权威端需要录制一份不受座位过滤的事件流**；它只在服务端存在，赛后落盘，绝不下发给在线客户端。
 - D2 决定了**观战连接使用与玩家相同的流格式**，只是“可见性策略”不同，不需要单独的协议分支。
@@ -675,13 +677,18 @@ mahjong/
     tables/                  # 6 个查表 .bytes（旧项目迁移，v1 不动）
   replays/                   # 运行期生成，git 忽略
   docs/
-    DESIGN.md
+    AGENTS.md                # 文档标准：tier/写作规则/预算/门禁
+    architecture.md          # 当前实现地图（M0 起随代码更新）
+    DESIGN.md                # 目标设计基线（本文件）
+    development.md           # 命令/验证/MCP/团队/提交
     TABLES.md                # 查表格式/来源/生成计划
     PROTOCOL.md              # 包字段级定义（M0 产出）
     REPLAY_FORMAT.md         # 回放二进制布局（M1 产出）
+    milestones/  postmortem/  engineering/pitfalls/  reference/  legacy/
+  .agents/notes/             # 决策记录（implemented/rejected/...）
   tools/
-    content-export/          # 旧项目 ScriptableObject → JSON
-    replay-inspect/          # 回放/流检查工具
+    doc-gate/                # 文档门禁
+    table-inspect/           # 查表解码
     aot-smoke/               # 导出+AOT 冒烟（每个里程碑跑）
 ```
 

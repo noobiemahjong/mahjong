@@ -1,60 +1,92 @@
-# docs/AGENTS.md（文档与知识树规则）
+# docs/AGENTS.md（文档标准）
 
-适用 `docs/**`。全仓规则见根 [AGENTS.md](../AGENTS.md)；本文件只声明**文档放哪、怎么写、怎么精简**，不复述根文件。
+适用 `docs/**`。全仓常驻规矩见根 [AGENTS.md](../AGENTS.md)；本文件管**文档放哪、怎么写、预算与门禁**。
 
-## 开工先读顺序
+开工读序：`README.md` → 根 [AGENTS.md](../AGENTS.md) → 本文件 → [architecture.md](architecture.md) → 相关子树 `AGENTS.md`。
 
-`README.md` → 根 [AGENTS.md](../AGENTS.md) → 本文件 → [DESIGN.md](DESIGN.md) → [adr/README.md](adr/README.md) → 对应 milestone / engineering。
+## Tier（一事实一归宿）
 
-## 文档树（新文档放哪）
+| Tier | 只写什么 | 不写什么 |
+|---|---|---|
+| 根 `AGENTS.md` | 跨目录常驻规矩，每条 1–3 行 + 链接 | 故事、长流程、下位细节 |
+| 子树 `AGENTS.md` | 该子树专属规矩（`src/`、`tools/`、`docs/`） | 根已有的全仓规则 |
+| [architecture.md](architecture.md) | **当前实现地图**：组成、核心循环、seam、扩展点 | 类型细节（→ subsystems）、决策理由（→ notes）、实现状态标注 |
+| `subsystems/` | 每个子系统一页：类型/语义/契约（有实现后建页） | 行为叙述（→ architecture）、决策理由（→ notes） |
+| `cookbook/` | 带编号验证步骤的操作手册（构建、导出 AOT、看回放…） | 设计理由（→ notes） |
+| `postmortem/` | 事故复盘：现象、时间线、根因、止血、防复发 | 决策、正常契约 |
+| [DESIGN.md](DESIGN.md) | **目标设计基线**（未实现/实现中的规格） | 把已实现事实写成目标；实现后现状归 architecture |
+| [TABLES.md](TABLES.md) / [reference/](reference/README.md) | 数据格式、外部素材证据、可复现命令 | 决策与过程纪要 |
+| `milestones/` | 阶段计划/结果；**状态唯一权威在任务表** | 决策理由、进度速览 |
+| [.agents/notes/](../.agents/notes/README.md) | 决策的 why、放弃的方案、必须的验证 | 操作教程、当前接口清单 |
+| [legacy/](legacy/README.md) | 旧 Unity 历史资料 | 作为设计依据或验收基线 |
 
-| 位置 | 唯一职责 |
+**放置判据**：读代码的人要的 → 注释；下一个做决定的人要的 → notes；当前怎么运转 → architecture/subsystems；怎么做 → cookbook；事故 → postmortem；数据/证据 → TABLES/reference。
+
+## 写作规则
+
+- **只写当前事实**：历史归 git、notes、postmortem；禁止「以前/现在/不再/曾经」。
+- **一段一行**（编辑器 soft-wrap）；表格/代码块/列表保持原格式。
+- **禁止状态标注**：不写「已实现/待实现/未来会」；状态由代码、目录、任务表承载。
+- **禁止手抄生成物**：协议常量、表 key、API 清单由代码/生成器产出，文档只链接。
+- **禁止过程叙述**：不写「我当时怎么查的」「自检轮纪要」；可复现证据进 reference。
+- **禁止重复规则**：同一判据只留一处，其余链接。
+- **禁止范围字面量**：不写 `001~017`；用可解析引用（`pitfall/003`、`Note 路径`）。
+- **日期取真值**：git 提交日或当天；禁推断/未来日期。
+- **代码块可验证**：有代码后，文档中的 C# 片段必须能编译（或明确标为伪代码）。
+- **已落地 Note 禁 spec-speak**：不写「应该/计划/验收清单」，只写现状（见 notes 规则）。
+
+## Slop 清单（评审时逐条查）
+
+1. 重复规则：搜一句特征话，只留一处。
+2. 历史跑出允许的 tier：docs 里出现变迁叙述。
+3. 状态标注：「已实现/未来」这类会腐烂的句子。
+4. 手抄目录：API/配置/常量清单不是生成物。
+5. 过程流水账：实现步骤、测试走查、排查日志。
+6. 决策理由重复：同一理由散落在多个函数/章节。
+7. 段落墙：一段塞多条规则，拆开或下沉。
+8. 强调通胀：满屏加粗/CAPS/「关键」，没有重点。
+
+## 预算
+
+| 文档 | 上限 |
 |---|---|
-| `DESIGN.md` | **设计基线**：是什么/为什么这么设计；D1–D18 与各章节是权威；只经 ADR 变更 |
-| `TABLES.md` | 查表数据的格式、来源、解码方法、生成计划 |
-| `adr/` | **决策**：选了什么 + 为什么 + 放弃了什么；索引先读 |
-| `milestones/` | 阶段 master + 任务文档；**状态唯一权威在任务表** |
-| `engineering/` | 工程坑（pitfalls）与我们否决的方案（rejected-alternatives） |
-| `reference/` | 可复现技术证据（AOT、表格式、外部资料勘察） |
-| `bugs/` | 我们自己的缺陷与事故诊断 |
-| `notes/`、`ARCHITECTURE-unity-legacy.md` | 旧项目历史资料，**仅素材参考**，不作为设计依据 |
+| 根 `AGENTS.md` | 6 KB |
+| 子树 `AGENTS.md` | 4 KB |
+| `docs/AGENTS.md` | 6 KB |
+| `docs/development.md` | 8 KB |
+| `docs/architecture.md` | 8 KB |
+| `docs/DESIGN.md` | 64 KB |
+| `docs/TABLES.md` | 16 KB |
+| `docs/legacy/ARCHITECTURE-unity-legacy.md` | 64 KB |
+| 单篇 Note / milestone / postmortem / pitfall | 8 KB / 10 KB / 8 KB / 4 KB |
+| 索引行（milestones 等） | ≤300 字符 |
 
-**放不下时怎么选**：① 判「读者是谁」——读代码的人要的进注释；下一个做决定的人要的进 `adr/` 或 `engineering/rejected-alternatives.md`；可复现证据进 `reference/`；任务判据与实施记录进 `milestones/`；我们自己的缺陷进 `bugs/`。② 只是「我当时怎么查出来的」不落盘，除非它本身是可复现证据链。
+超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同提交改预算并说明理由）。
 
-## 非平凡改动判定（必须留痕）
+## 门禁（M0 交付 `tools/doc-gate`，当前为规范）
 
-命中任一类 ⇒ 必须留痕（载体按根文件 §1 判）：
-
-| 触发类 | 例 |
+| 编号 | 规则 |
 |---|---|
-| 行为 | 玩家可见效果、判定顺序、超时/托管、分数、提示文案 |
-| 架构 | 程序集/目录边界、谁能调谁、跨层依赖 |
-| 跨文件契约 | 协议包、事件、内容格式、表 key、版本三元组 |
-| 工具链 | 构建、AOT、导出、CI、门禁、git hooks |
-| 测试策略 | 什么必须测、什么不测、为什么 |
-| 数据/网络/配置格式 | 表结构、回放格式、房间设置、contentHash |
+| G1 | 仓内相对链接可解析（仓外只报告不拦） |
+| G2 | 无 UTF-8 BOM |
+| G3 | 仅 LF |
+| G4 | 表结构：单元格数 = 表头；无未转义双竖线 |
+| G5 | 单行 ≤5000 字符 |
+| G6 | 索引行 ≤300 字符 |
+| G7 | 每篇 ≤ 预算 |
+| G8 | 预算棘轮：上限只降不升；上调须同提交改基线并说明 |
+| G9 | 脚本/钩子纯 ASCII |
+| G10 | Note：文件名 `yyyy-mm-dd-slug.md`；lifecycle/class 在闭集内；`Status:` 与所在文件夹一致；禁止 `INDEX.md` |
+| G11 | `engineering/pitfalls/` 编号连续，README 不维护区间 |
+| G12 | 一段一行（soft-wrap；表格/代码/列表除外） |
 
-**豁免**：格式化/重排、纯重命名、不改行为的死代码删除、按已登记项做回补、跟随既有决策的局部实现（不推翻不扩展）。
+门禁未实现前不得作为验收证据（见根 §红线）。
 
-## 写作口径
+## 模板
 
-- **禁历史变迁词**：不写「以前/现在/不再/曾经」，只写当前事实；变迁过程归 git 与 ADR。
-- **禁范围字面量**：不写 `001~017` 这类区间；用目录链接或可解析引用（`ADR-002`、`pitfalls/003`、`D12`）。
-- **日期取真值**：写进 docs 的日期必须来自 git 提交日或当天真实日期；禁推断/未来日期。
-- **指针优先**：上位文档只写定位与链接；同一事实只写一处。
-- **表格不变量**：行内不得含未转义 `||`；单元格数必须与表头一致。
-- **编码**：UTF-8 无 BOM、LF；行尾交给 git 归一，不用脚本「统一行尾」。
-- **体量**：遵守根文件 §6 的预算；上限只降不升，上调须同提交改基线并说明理由。
-- **不写进度速览**：进度以 milestones README + 各任务表为准，不在入口文件维护。
-- **不手抄生成物**：查表、协议常量、版本号由源文件/工具产生，文档只链接。
-- **旧结论不改**：已发布 ADR 不重写；新决策写新 ADR，并在 ADR 索引状态列标注收窄关系。
-- **旧项目资料不参与决策**：`notes/` 与 `ARCHITECTURE-unity-legacy.md` 只在需要复用素材/规则时查；不要求行为等价、不做逐项对照、不登记旧版差异。
-- **历史资料豁免**：`notes/` 与 `ARCHITECTURE-unity-legacy.md` 保留迁移时的原文（含旧文件行号），不受「禁行号」规则约束；它们不是本仓代码的引用，也不作为权威。
+- Note：[.agents/notes/000-template.md](../.agents/notes/000-template.md)
+- 里程碑：[milestones/TEMPLATE.md](milestones/TEMPLATE.md)
+- 事故：[postmortem/000-template.md](postmortem/000-template.md)
+- 坑：[engineering/pitfalls/000-template.md](engineering/pitfalls/000-template.md)
 
-## 模板与门禁
-
-- ADR：[adr/000-template.md](adr/000-template.md)；索引与状态取值见 [adr/README.md](adr/README.md)。
-- 里程碑：[milestones/TEMPLATE.md](milestones/TEMPLATE.md)。
-- Pitfall：[engineering/pitfalls/000-template.md](engineering/pitfalls/000-template.md)。
-- Bug：[bugs/000-template.md](bugs/000-template.md)。
-- 门禁规则与预算：根 [AGENTS.md](../AGENTS.md) §6；实现（`tools/doc-gate`）是 M0 交付，**未实现前不假装已跑**。
+**历史资料豁免**：`legacy/` 保留迁移原文（含旧文件行号），不受「禁行号」约束；它不是本仓代码引用，也不作为权威。

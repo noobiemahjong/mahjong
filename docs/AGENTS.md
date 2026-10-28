@@ -10,13 +10,15 @@
 |---|---|---|
 | 根 `AGENTS.md` | 跨目录常驻规矩，每条 1–3 行 + 链接 | 故事、长流程、下位细节 |
 | 子树 `AGENTS.md` | 该子树专属规矩（`src/`、`tools/`、`docs/`） | 根已有的全仓规则 |
+| [handbook.md](handbook.md) | 新成员入口：环境/跑起来/工作方式/找东西 | 决策理由（→ DESIGN/notes） |
 | [architecture.md](architecture.md) | **当前实现地图**：组成、核心循环、seam、扩展点 | 类型细节（→ subsystems）、决策理由（→ notes）、实现状态标注 |
 | `subsystems/` | 每个子系统一页：类型/语义/契约（有实现后建页） | 行为叙述（→ architecture）、决策理由（→ notes） |
 | `cookbook/` | 带编号验证步骤的操作手册（构建、导出 AOT、看回放…） | 设计理由（→ notes） |
 | `postmortem/` | 事故复盘：现象、时间线、根因、止血、防复发 | 决策、正常契约 |
 | [DESIGN.md](DESIGN.md) | **目标设计基线**（未实现/实现中的规格） | 把已实现事实写成目标；实现后现状归 architecture |
 | [TABLES.md](TABLES.md) / [reference/](reference/README.md) | 数据格式、外部素材证据、可复现命令 | 决策与过程纪要 |
-| `milestones/` | 阶段计划/结果；**状态唯一权威在任务表** | 决策理由、进度速览 |
+| `milestones/` | 阶段 master 计划 + 实施规格；**状态唯一权威在任务表** | 决策理由、进度速览 |
+| `specs/` | 网络/回放/发现等格式契约（版本化） | 决策理由（→ notes）、当前实现（→ subsystems） |
 | [.agents/notes/](../.agents/notes/README.md) | 决策的 why、放弃的方案、必须的验证 | 操作教程、当前接口清单 |
 | [legacy/](legacy/README.md) | 旧 Unity 历史资料 | 作为设计依据或验收基线 |
 
@@ -60,6 +62,7 @@
 | `docs/legacy/ARCHITECTURE-unity-legacy.md` | 64 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
 | 单篇 task（`M<N>/T-*`）/ reference | 8 KB / 8 KB |
+| handbook / specs / 实施规格 | 8 KB / 10 KB / 16 KB |
 | 索引行（milestones 等） | ≤300 字符 |
 
 超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同提交改预算并说明理由）。

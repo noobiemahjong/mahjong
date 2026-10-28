@@ -6,6 +6,7 @@
 
 ## 文档
 
+- [新成员手册](docs/handbook.md)：环境、跑起来、工作方式、找东西
 - [目标设计 v1.0](docs/DESIGN.md)：架构、tick 引擎、会话流协议、全景回放、断线重连、部署与里程碑
 - [当前实现地图](docs/architecture.md)：M0.1 起随代码更新
 - [文档标准](docs/AGENTS.md)：tier、写作规则、预算、门禁

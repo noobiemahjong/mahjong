@@ -5,10 +5,11 @@
 ## 开工读序
 
 1. 本文件。
-2. [docs/AGENTS.md](docs/AGENTS.md)：文档标准、tier、预算、门禁。
-3. [docs/architecture.md](docs/architecture.md)：当前实现地图；未实现时看 [docs/DESIGN.md](docs/DESIGN.md)（目标设计）。
-4. [.agents/notes/README.md](.agents/notes/README.md)：决策记录规则。
-5. 任务相关子树：[src/AGENTS.md](src/AGENTS.md)、[tools/AGENTS.md](tools/AGENTS.md)。
+2. [docs/handbook.md](docs/handbook.md)：新成员入口（环境、跑起来、工作方式、找东西）。
+3. [docs/AGENTS.md](docs/AGENTS.md)：文档标准、tier、预算、门禁。
+4. [docs/architecture.md](docs/architecture.md)：当前实现地图；未实现时看 [docs/DESIGN.md](docs/DESIGN.md)（目标设计）。
+5. [.agents/notes/README.md](.agents/notes/README.md)：决策记录规则。
+6. 任务相关子树：[src/AGENTS.md](src/AGENTS.md)、[tools/AGENTS.md](tools/AGENTS.md)。
 
 冲突裁决：`CLAUDE.local.md`（若存在） > 子树 `AGENTS.md` > 本文件 > `docs/` 内文档。
 

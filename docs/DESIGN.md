@@ -3,7 +3,8 @@
 > 状态：**v1.0 基线**（D1–D18 已拍板，2026-10-28）
 > 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT）
 > 目标引擎：Godot 4.7.2（mono / .NET 10，与 Ursa-Client 同形态：net10.0 + NativeAOT）
-> 前置阅读：旧项目架构总结（docs/ARCHITECTURE-unity-legacy.md）、SGS 参考实现（E:/learn/sgs）、GameEventEngine（E:/learn/GameEventEngine）
+> 前置阅读：旧项目架构总结（同目录 `ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
+> 治理规则：仓库根 [AGENTS.md](../AGENTS.md) 与 [docs/AGENTS.md](AGENTS.md)
 > 本文档只写设计，不含实现代码。
 
 ---

@@ -22,3 +22,16 @@
 
 - Godot 4.7.2（mono / .NET 版）
 - .NET SDK 10（客户端 net10.0；服务器 JIT 发布）
+
+
+## 治理
+
+- 共享指令：[AGENTS.md](AGENTS.md)
+- 文档规则：[docs/AGENTS.md](docs/AGENTS.md)
+- 设计基线：[docs/DESIGN.md](docs/DESIGN.md)
+- 决策索引：[docs/adr/README.md](docs/adr/README.md)
+- 里程碑：[docs/milestones/README.md](docs/milestones/README.md)
+- 旧版行为偏离登记：[docs/registry/旧版行为偏离登记.md](docs/registry/旧版行为偏离登记.md)
+- 查表数据：[docs/TABLES.md](docs/TABLES.md)
+
+> 治理体系裁剪自 `E:/learn/Ursa-Server` 与 `E:/learn/Ursa-Client`，见 [ADR-002](docs/adr/002-文档治理裁取Ursa两仓.md)。

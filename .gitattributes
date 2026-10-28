@@ -1,0 +1,15 @@
+# 行尾与二进制：文本一律 LF，二进制显式标记
+* text=auto eol=lf
+*.bytes binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
+*.dll binary
+*.pdb binary
+*.exe binary
+*.zip binary
+tools/git-hooks/* text eol=lf

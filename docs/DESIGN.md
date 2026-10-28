@@ -25,7 +25,7 @@
 | D7 | 观战 | 上限 **8**；公网允许身份盲观战；全知观战仅私有房开关 | 观战 |
 | D8 | 回放分发 | 服务器保留**最近 30 局**；赛后客户端下载；支持选轮与快进快退 | 回放/服务端 |
 | D9 | 人数 | **固定 4 人**；不足用 Bot 补位 | 会话/UI |
-| D10 | Bot 表 | 先沿用旧表跑通，M4 再优化结构 | 内容/算法 |
+| D10 | Bot 表 | 先沿用旧表跑通（已迁移到 content/tables/，见 TABLES.md），M4 再评估重写生成器 | 内容/算法 |
 | D11 | 音频 | v1 仅中文（旧项目只有 Mandarin，男/女两套，共 83 个 mp3） | 内容 |
 | D12 | 目标框架 | **net10.0**；**客户端 AOT、服务器普通 JIT 发布** | 全项目 |
 | D13 | 空房 | 4 个真人全部离线 → **立即销毁房间**（不保留、不等托管） | 会话/服务端 |
@@ -630,10 +630,16 @@ content/
   suits.json             # 花色规则（是否顺子、每种张数）
   skills.json            # 4 个技能的元数据（id、动画资源、语音）
   scoring.json           # 番种、分值（v1 可先硬编码，后续配置化）
-  bots/
-    win_table.bin        # 胡牌查表（原 15MB 级别，v1 沿用格式）
-    ai_table.bin         # 牌效查表
+  tables/                # 旧项目原样迁移的 6 个查表（v1 唯一事实来源）
+    dictionary_normal.bytes      # 胡牌表（万/筒/条）
+    dictionary_wind.bytes        # 胡牌表（风）
+    dictionary_dragon.bytes      # 胡牌表（箭）
+    ai_dictionary_normal.bytes   # 牌效表（万/筒/条）
+    ai_dictionary_wind.bytes     # 牌效表（风）
+    ai_dictionary_dragon.bytes   # 牌效表（箭）
 ```
+
+> 表的二进制格式、key 编码、与上游算法仓库的差异、以及「生成器丢失」后的处理方案，见 [TABLES.md](TABLES.md)。
 
 - contentHash = 上述文件的 sha256 清单哈希，握手与回放都校验；
 - 旧项目的 ScriptableObject 数据导出为 JSON；查表二进制**先沿用旧格式**（D10），加载后转为更紧凑的结构（排序数组 + 二分）以降低内存；
@@ -665,9 +671,11 @@ mahjong/
     Mahjong.Server/          # 无头宿主（net10，普通 JIT 发布）
     Mahjong.Tests/           # xUnit（net10）
   content/
+    tables/                  # 6 个查表 .bytes（旧项目迁移，v1 不动）
   replays/                   # 运行期生成，git 忽略
   docs/
     DESIGN.md
+    TABLES.md                # 查表格式/来源/生成计划
     PROTOCOL.md              # 包字段级定义（M0 产出）
     REPLAY_FORMAT.md         # 回放二进制布局（M1 产出）
   tools/
@@ -732,6 +740,7 @@ mahjong/
 | 镜像与权威流程漂移 | 静默状态不一致 | StateHash 对账 + 金标回放 + 单测 |
 | UI 重做工作量被低估 | 进度风险 | M0 先做“能玩”的最小 UI，美术后置 |
 | Bot 查表 15MB 的内存/加载 | 移动端/低配机 | D17：实现后先测基线；先沿用旧表 + 排序数组/异步加载，M4 再定优化目标 |
+| 旧 C# 表生成器丢失 | 无法重新生成/扩展查表 | 以 content/tables 下的 .bytes 为唯一事实来源（已迁移并解码确认）；M4 才评估重写生成器，验收=与旧表逐条语义一致；**不得直接用上游 data 替换**（语义不同，见 TABLES.md） |
 | 规则语义在移植中变化 | 老玩家体验差异 | 用旧项目录像/对局做金标对比 |
 | 版本耦合（镜像需同 rulesVersion） | 老录像/老客户端不可用 | 明确“不跨版本”；回放文件带版本，拒绝而非迁移 |
 | 移动端 AOT/性能未验证 | M5 才暴露 | v1 就遵守 §7.5 约束；M5 先 Android，iOS 更晚 |

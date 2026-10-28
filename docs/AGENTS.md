@@ -4,24 +4,22 @@
 
 ## 开工先读顺序
 
-`README.md` → 根 [AGENTS.md](../AGENTS.md) → 本文件 → [DESIGN.md](DESIGN.md) → [adr/README.md](adr/README.md) → 对应 milestone / registry / pitfalls。
+`README.md` → 根 [AGENTS.md](../AGENTS.md) → 本文件 → [DESIGN.md](DESIGN.md) → [adr/README.md](adr/README.md) → 对应 milestone / engineering。
 
 ## 文档树（新文档放哪）
 
 | 位置 | 唯一职责 |
 |---|---|
 | `DESIGN.md` | **设计基线**：是什么/为什么这么设计；D1–D18 与各章节是权威；只经 ADR 变更 |
-| `TABLES.md` | 查表数据的格式、来源、差异证据、生成计划 |
-| `ARCHITECTURE-unity-legacy.md` | 旧 Unity 项目架构总结（**历史参考**，不是新项目权威） |
-| `notes/` | 旧项目模块精读（**历史参考**） |
+| `TABLES.md` | 查表数据的格式、来源、解码方法、生成计划 |
 | `adr/` | **决策**：选了什么 + 为什么 + 放弃了什么；索引先读 |
 | `milestones/` | 阶段 master + 任务文档；**状态唯一权威在任务表** |
-| `porting/` | 旧→新映射、rejected-alternatives、pitfalls |
-| `registry/` | **有意偏离旧版行为**的登记表 |
-| `reference/` | 外部素材勘察与可复现证据链（含命令/路径） |
+| `engineering/` | 工程坑（pitfalls）与我们否决的方案（rejected-alternatives） |
+| `reference/` | 可复现技术证据（AOT、表格式、外部资料勘察） |
 | `bugs/` | 我们自己的缺陷与事故诊断 |
+| `notes/`、`ARCHITECTURE-unity-legacy.md` | 旧项目历史资料，**仅素材参考**，不作为设计依据 |
 
-**放不下时怎么选**：① 判「读者是谁」——读代码的人要的进注释；下一个做决定的人要的进 `adr/` 或 `porting/rejected-alternatives.md`；可复现证据进 `reference/`；任务判据与实施记录进 `milestones/`；我们自己的缺陷进 `bugs/`。② 只是「我当时怎么查出来的」不落盘，除非它本身是可复现证据链。
+**放不下时怎么选**：① 判「读者是谁」——读代码的人要的进注释；下一个做决定的人要的进 `adr/` 或 `engineering/rejected-alternatives.md`；可复现证据进 `reference/`；任务判据与实施记录进 `milestones/`；我们自己的缺陷进 `bugs/`。② 只是「我当时怎么查出来的」不落盘，除非它本身是可复现证据链。
 
 ## 非平凡改动判定（必须留痕）
 
@@ -50,11 +48,13 @@
 - **不写进度速览**：进度以 milestones README + 各任务表为准，不在入口文件维护。
 - **不手抄生成物**：查表、协议常量、版本号由源文件/工具产生，文档只链接。
 - **旧结论不改**：已发布 ADR 不重写；新决策写新 ADR，并在 ADR 索引状态列标注收窄关系。
+- **旧项目资料不参与决策**：`notes/` 与 `ARCHITECTURE-unity-legacy.md` 只在需要复用素材/规则时查；不要求行为等价、不做逐项对照、不登记旧版差异。
+- **历史资料豁免**：`notes/` 与 `ARCHITECTURE-unity-legacy.md` 保留迁移时的原文（含旧文件行号），不受「禁行号」规则约束；它们不是本仓代码的引用，也不作为权威。
 
 ## 模板与门禁
 
 - ADR：[adr/000-template.md](adr/000-template.md)；索引与状态取值见 [adr/README.md](adr/README.md)。
 - 里程碑：[milestones/TEMPLATE.md](milestones/TEMPLATE.md)。
-- Pitfall：[porting/pitfalls/000-template.md](porting/pitfalls/000-template.md)。
+- Pitfall：[engineering/pitfalls/000-template.md](engineering/pitfalls/000-template.md)。
 - Bug：[bugs/000-template.md](bugs/000-template.md)。
 - 门禁规则与预算：根 [AGENTS.md](../AGENTS.md) §6；实现（`tools/doc-gate`）是 M0 交付，**未实现前不假装已跑**。

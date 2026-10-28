@@ -1,6 +1,6 @@
 # Bugs（我们自己的缺陷）
 
-> 只放**本仓/新项目**的缺陷与事故诊断；旧项目的事实/证据归 [reference](../reference/README.md)；决策归 [adr](../adr/)；坑归 [pitfalls](../porting/pitfalls/)。
+> 只放**本仓/新项目**的缺陷与事故诊断；旧项目历史资料归 [notes](../notes/)；技术证据归 [reference](../reference/README.md)；决策归 [adr](../adr/)；坑归 [pitfalls](../engineering/pitfalls/)。
 > 命名：`NNN-短标题.md`；新建前先 `Glob` 避让编号。
 
 ## 索引

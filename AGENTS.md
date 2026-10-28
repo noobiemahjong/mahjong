@@ -5,48 +5,64 @@
 1. `AGENTS.md`（本文件）
 2. `docs/AGENTS.md`（文档放哪、怎么写）
 3. `docs/DESIGN.md`（设计基线，D1–D18 与各章节是权威）
-4. `docs/adr/README.md` + `docs/porting/rejected-alternatives.md`（已做的决定、已否决的方案）
-5. 与任务相关的 `docs/milestones/`、`docs/registry/`、`docs/porting/pitfalls/`、`docs/reference/`
+4. `docs/adr/README.md` + `docs/engineering/rejected-alternatives.md`（已做的决定、已否决的方案）
+5. 与任务相关的 `docs/milestones/`、`docs/engineering/pitfalls/`、`docs/bugs/`、`docs/reference/`
 
 **冲突裁决**：`CLAUDE.local.md`（若存在） > 子树 `AGENTS.md` > 本文件 > `docs/` 内文档。
 **同一信息只写一处**：子树负责的规则不在根复述；`docs/` 是项目状态的唯一权威。
 
-## 0. 治理来源（ADR-002）
+## 0. 治理与开发思路（ADR-002）
 
-本仓的文档治理**裁剪自** `E:/learn/Ursa-Server` 与 `E:/learn/Ursa-Client` 两套已跑通的体系：
+治理与工作方式裁剪自 `E:/learn/Ursa-Server` 与 `E:/learn/Ursa-Client` 两套已跑通的仓库；**只借鉴机制，不继承它们的基线**。
 
-- 保留：三载体分工、ADR、里程碑 master+任务、pitfalls、rejected-alternatives、registry、bugs、reference、预算与门禁分层、提交纪律、MCP 优先、收尾汇报。
-- 裁剪：不照搬 49 篇 ADR 的规模；不做 GitHub Issue 镜像；不建客户端逆向目录；red-test/变异台账与 doc-slim 全量普查推迟到 M2 之后再评估；基线锚点从「Java 类.方法」换成「旧 Unity 项目 `类.方法` / 文件路径」。
-- 详见 [ADR-002](docs/adr/002-文档治理裁取Ursa两仓.md)。
+### 0.1 明确不做的事
 
-## 1. 三载体分工（ADR-002 继承自 Ursa ADR-024/009）
+- **不追求与旧 Unity 版本行为等价**：旧版很多设计本身不合理，我们按 `docs/DESIGN.md` 重新设计。
+- **不登记「旧版行为偏离」**：差异不是债务，不需要逐条审批；只有与 DESIGN 冲突时才算问题。
+- **不记录代码出处/逆向地址**（IDA 地址、「对应旧版第几行」之类）：注释只解释**为什么**与**契约**。
+- 旧项目与 `docs/notes/`、`docs/ARCHITECTURE-unity-legacy.md` 只作为**素材与规则参考**，不是验收基线；需要复用数据/素材时查，不需要逐项对照。
+
+### 0.2 继承的开发思路
+
+1. **内核与引擎分离**：规则/流程/协议是纯 C#（`Mahjong.Core`），Godot 只做宿主与表现；内核可单测、可换引擎。
+2. **先取证/先 spike，再承诺**：AOT、导出、表格内存、tick 性能这类不确定项先做小实验，拿数字再进计划。
+3. **设计先行、基线唯一**：先改 DESIGN/ADR，再写代码；没有设计依据的实现不进主干。
+4. **小步可验收**：一个任务一个提交，每个任务有明确 L1/L2/L3 验收；没有验收口径不开工。
+5. **量测优先**：性能/内存/体积先测基线再优化；不拿「感觉」当结论。
+6. **任务单元化**：单单元一产物，默认 ≤80 步 / ≤150K；做完停下汇报，等确认再下一个。
+7. **文档只留决策、契约、结果**：过程叙述、自检纪要、「我当时怎么查的」不落盘。
+8. **不 push**：提交留在本地，由用户推送。
+
+### 0.3 沿用下来的治理机制
+
+三载体分工、ADR（一条一决策 + 索引 + 冻结）、里程碑 master + 任务文档、pitfalls、rejected-alternatives、bugs、reference 证据、文档预算与门禁分层、MCP 优先、提交纪律与收尾汇报。
+
+## 1. 三载体分工
 
 行为、理由、过程各有唯一载体，**同一信息只写一处**：
 
 | 载体 | 只写 | 不写 |
 |---|---|---|
-| 代码注释 | 与旧 Unity 实现的对应关系（`类.方法`）、读代码看不出的「为什么」、有意偏离旧行为之处 | 逐句对拍、执行历史、日期、行号、完整设计论证 |
+| 代码注释 | 读代码看不出的「为什么」、不变量/前置条件、对外契约、有意为之的取舍 | 代码出处考证、旧版对应、执行历史、日期、行号、完整设计论证 |
 | commit body | 改了什么 / 为什么 / 验收口径（跑了哪些 L1/L2/L3） | 逐项举证明细、坑的全文、设计再复述 |
 | `docs/` | 决策（ADR）、设计基线、里程碑计划/结果、登记表、可复现证据链 | 自检过程纪要、「我当时怎么查出来的」、进度速览 |
 
 判据：**读代码的人需要这句话吗？** 不需要 ⇒ 归 commit。**下一个人要据此做决定吗？** 不需要 ⇒ 归 git log。
 
-**锚点红线**：引用本仓代码一律写 `类型.方法` 或 `文件路径（不含行号）`；旧项目/外部仓库可写其路径与 commit；**禁止在 docs/注释/commit 里引用本仓行号**（会随提交腐化）。
+**引用规则**：引用本仓代码写 `类型.方法` 或 `文件路径`（不写行号）；引用外部资料写路径/URL/commit；禁止「对应旧版某处」式锚点。
 
 ## 2. 仓库导航
 
 | 路径 | 放什么 | 规则 |
 |---|---|---|
 | `docs/DESIGN.md` | **设计基线**：目标/非目标、分层、tick 引擎、会话流、回放、观战、重连、部署、里程碑 | 只经 ADR 变更（ADR-001） |
-| `docs/TABLES.md` | 查表二进制格式、来源、与上游差异、生成计划 | 数据唯一来源是 `content/tables/` |
-| `docs/ARCHITECTURE-unity-legacy.md` | 旧 Unity 项目架构总结 | **历史参考**，不是新项目权威 |
-| `docs/notes/` | 旧项目模块精读笔记 | **历史参考**，不是新项目权威 |
+| `docs/TABLES.md` | 查表二进制格式、来源、解码方法、生成计划 | 数据唯一来源是 `content/tables/` |
 | `docs/adr/` | 决策：选了什么 + 为什么 + 放弃了什么 | 索引先读；编号连续 |
 | `docs/milestones/` | 阶段 master + 任务文档；**状态唯一权威在任务表** | 计划先行、收口补结果 |
-| `docs/porting/` | 旧→新映射、rejected-alternatives、pitfalls | 移植前先读 |
-| `docs/registry/` | **有意偏离旧行为**的登记表 | 每条必须有落点与理由 |
-| `docs/reference/` | 外部素材勘察、可复现证据链 | 必须给复现命令/路径 |
+| `docs/engineering/` | 工程坑（pitfalls）与否决方案（rejected-alternatives） | 新建前先查编号/条目 |
+| `docs/reference/` | 可复现的技术证据（AOT、表格式、外部资料勘察） | 必须给复现命令/路径 |
 | `docs/bugs/` | 我们自己的缺陷与事故诊断 | 与决策、坑分开 |
+| `docs/notes/`、`docs/ARCHITECTURE-unity-legacy.md` | 旧项目历史资料 | **仅素材参考**，不作为设计依据 |
 | `content/tables/` | 6 个查表 `.bytes` | **禁止手改**；变更需 ADR + 金标验证 |
 | `src/`、`tools/` | 代码与工具（M0 起） | 各自 `AGENTS.md` 承担细则 |
 
@@ -55,9 +71,8 @@
 **开工前**：
 
 1. 读 §0 的读序；确认任务在 `docs/milestones/` 里有对应项与验收口径。
-2. 查 `docs/adr/` 与 `docs/porting/rejected-alternatives.md`，避免重开已否决方案。
-3. 查 `docs/registry/`：本任务是否触碰「有意偏离旧行为」的条目。
-4. `git status` 必须干净；有脏树先说明再动手。
+2. 查 `docs/adr/` 与 `docs/engineering/rejected-alternatives.md`，避免重开已否决方案。
+3. `git status` 必须干净；有脏树先说明再动手。
 
 **实施中**：
 
@@ -80,20 +95,19 @@
 | 1 | 开工先读 AGENTS 链 + DESIGN + 相关 ADR/rejected | 任何任务 | 本文件 §0 |
 | 2 | 非平凡改动必须留痕，且按三载体选唯一落点 | 改行为/架构/契约/工具链/测试策略/数据格式 | [docs/AGENTS.md](docs/AGENTS.md) |
 | 3 | 同一信息只写一处；上位文档只放定位与链接 | 写/改文档 | [docs/AGENTS.md](docs/AGENTS.md) |
-| 4 | 旧结论不改：DESIGN/ADR 一旦发布，新决策写新 ADR 并标注收窄关系 | 改设计/推新方案 | [ADR-001](docs/adr/001-设计基线与变更程序.md) |
-| 5 | 有意偏离旧版行为必须登记，禁止只写在代码里 | 行为与旧版不同 | [registry](docs/registry/旧版行为偏离登记.md) |
-| 6 | 踩坑写 `pitfalls/` 新编号篇，先 `Glob` 避让；只写仍有效的结论 | 踩坑后 | [porting/pitfalls](docs/porting/pitfalls/README.md) |
-| 7 | 一个任务一个 Conventional Commit；不 push；收尾汇报等确认 | 提交/收尾 | 本文件 §3 |
-| 8 | 日期取真值（git 提交日或当天）；禁推断/未来日期；禁历史变迁词 | 写 docs | [docs/AGENTS.md](docs/AGENTS.md) |
-| 9 | 证据必须可复现：数字/枚举/路径给命令；否定结论需跨编码扫描或字节实读 | 写证据/否定结论 | [docs/reference/README.md](docs/reference/README.md) |
-| 10 | 引用本仓代码用符号锚点，禁行号；外部路径可写 | 写注释/docs | 本文件 §1 |
-| 11 | Godot 相关开发以 Godot MCP 探活为硬前置，不通则停下要求启动；C# 符号查询 Roslyn MCP 优先（可降级） | 任何 Godot/C# 工作 | 本文件 §5 |
-| 12 | 委派任务必须写入 MCP 条款、载体、交付物与验收；一单元一产物；Lead 复核 diff 并跑门禁 | 开子任务/团队 | 本文件 §7 |
-| 13 | `content/tables` 与生成物禁止手改；变更需 ADR + 金标验证 | 动数据/生成物 | [TABLES](docs/TABLES.md) |
-| 14 | 改 `docs/` 后提交前跑门禁；CI 红 = P1，不带着红提交 | 改文档/提交前 | 本文件 §6 |
-| 15 | 不删「必填内容」换绿灯：判据、锚点、登记行、决策记录、编号只增不减 | 精简/过门禁 | 本文件 §6 |
+| 4 | DESIGN/ADR 一旦发布，新决策写新 ADR 并标注收窄关系；不改写旧文 | 改设计/推新方案 | [ADR-001](docs/adr/001-设计基线与变更程序.md) |
+| 5 | 踩坑写 `engineering/pitfalls/` 新编号篇，先 `Glob` 避让；只写仍有效结论 | 踩坑后 | [engineering/pitfalls](docs/engineering/pitfalls/README.md) |
+| 6 | 一个任务一个 Conventional Commit；不 push；收尾汇报等确认 | 提交/收尾 | 本文件 §3 |
+| 7 | 日期取真值（git 提交日或当天）；禁推断/未来日期；禁历史变迁词 | 写 docs | [docs/AGENTS.md](docs/AGENTS.md) |
+| 8 | 证据必须可复现：数字/枚举/路径给命令；否定结论需跨编码扫描或字节实读 | 写证据/否定结论 | [docs/reference/README.md](docs/reference/README.md) |
+| 9 | 引用本仓代码用符号/路径，禁行号；引用外部资料写路径/URL/commit | 写注释/docs | 本文件 §1 |
+| 10 | Godot 相关开发以 Godot MCP 探活为硬前置，不通则停下要求启动；C# 符号查询 Roslyn MCP 优先（可降级） | 任何 Godot/C# 工作 | 本文件 §5 |
+| 11 | 委派任务必须写入 MCP 条款、载体、交付物与验收；一单元一产物；Lead 复核 diff 并跑门禁 | 开子任务/团队 | 本文件 §7 |
+| 12 | `content/tables` 与生成物禁止手改；变更需 ADR + 金标验证 | 动数据/生成物 | [TABLES](docs/TABLES.md) |
+| 13 | 改 `docs/` 后提交前跑门禁；CI 红 = P1，不带着红提交 | 改文档/提交前 | 本文件 §6 |
+| 14 | 不删「必填内容」换绿灯：判据、锚点、登记行、决策记录、编号只增不减 | 精简/过门禁 | 本文件 §6 |
 
-## 5. MCP 纪律（ADR-002 继承自 Ursa-Client ADR-012/020、Ursa-Server ADR-020）
+## 5. MCP 纪律
 
 **开工第一步 = 探活**。禁止「不探活就直接 grep」当作默认路径。
 
@@ -142,7 +156,7 @@ MCP 写操作（改场景、改资产、导入资源）**必须属于已确认�
 | 单篇 pitfall | 4 KB |
 | 索引行 | ≤300 字符 |
 
-## 7. 团队与委派（继承自 Ursa-Server ADR-048）
+## 7. 团队与委派
 
 - 开工前在共享任务板建任务，写明写作用域（目录级即可），并行任务写作用域不重叠。
 - 子任务书必须包含：MCP 条款、载体（改哪些目录/文件）、交付物、验收命令、停止条件。
@@ -152,9 +166,9 @@ MCP 写操作（改场景、改资产、导入资源）**必须属于已确认�
 
 ## 8. 红线全文
 
-- **纪律 7（收尾汇报）**：做完一个任务就停下来汇报，等确认后再做下一个；不得连续开新任务。
+- **纪律 6（收尾汇报）**：做完一个任务就停下来汇报，等确认后再做下一个；不得连续开新任务。
 - **不 push**：所有提交留在本地，推送由用户执行。
 - **不手改查表**：`content/tables/*.bytes` 是唯一事实来源（[TABLES](docs/TABLES.md)）；任何替换/重生成需 ADR + 逐条对比。
-- **不伪造绿灯**：门禁未实现就写「待实现」；测试未跑就写「未跑」；禁止声称跑过但没跑。
-- **不删必填内容**：判据、锚点、登记行、决策记录、编号集合只增不减。
-- **不动用户资产**：旧 Unity 项目、Ursa 两仓、`E:/learn/sgs` 只读；修改需明确授权。
+- **不伪造绿灯**：门禁未实现就写「待实现」；测试未跑就写「未跑」。
+- **不删必填内容**：判据、引用、登记行、决策记录、编号集合只增不减。
+- **不动用户资产**：旧 Unity 项目、Ursa 两仓、`E:/learn/sgs` 只读参考；修改需明确授权。

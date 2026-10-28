@@ -1,6 +1,6 @@
 # ADR 索引
 
-> 一条 ADR = 一个决策：**选了什么 + 为什么 + 放弃了什么**。被放弃方案的完整清单在 [../porting/rejected-alternatives.md](../porting/rejected-alternatives.md)。
+> 一条 ADR = 一个决策：**选了什么 + 为什么 + 放弃了什么**。被放弃方案的完整清单在 [../engineering/rejected-alternatives.md](../engineering/rejected-alternatives.md)。
 > 已发布的 ADR 正文不因新决策改写；新决策写新 ADR，并在此表状态列标注收窄/替代关系。
 
 | 编号 | 标题 | 状态 |

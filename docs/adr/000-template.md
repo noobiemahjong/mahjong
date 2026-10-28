@@ -18,7 +18,7 @@
 
 ## 放弃了什么
 
-被否方案与原因；在什么条件下才重开（同步登记到 [rejected-alternatives](../porting/rejected-alternatives.md)）。
+被否方案与原因；在什么条件下才重开（同步登记到 [rejected-alternatives](../engineering/rejected-alternatives.md)）。
 
 ## 后果
 

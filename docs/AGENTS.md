@@ -59,6 +59,7 @@
 | `docs/TABLES.md` | 16 KB |
 | `docs/legacy/ARCHITECTURE-unity-legacy.md` | 64 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
+| 单篇 task（`M<N>/T-*`）/ reference | 8 KB / 8 KB |
 | 索引行（milestones 等） | ≤300 字符 |
 
 超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同提交改预算并说明理由）。

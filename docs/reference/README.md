@@ -10,7 +10,8 @@
 |---|---|---|
 | 查表格式与来源 | [../TABLES.md](../TABLES.md) | 6 个 .bytes 的 MessagePack 结构、key 编码、与上游差异、解码命令 |
 | 查表二进制 | `content/tables/` | v1 唯一事实来源；sha256 待写入 manifest |
-| Godot AOT 取证 | `E:/learn/Ursa-Client/docs/reference/AOT导出与裁剪取证.md` | Godot 4.7.2 NativeAOT 配方与裁剪坑 |
+| GameEventEngine | [game-event-engine.md](game-event-engine.md) | tick/Action 树原型：可借鉴与不要照搬的清单 |
+| Godot AOT 取证 | [godot-aot.md](godot-aot.md) | 4.7.2 NativeAOT 配方、导出命令、裁剪坑 |
 | SGS 参考实现 | `E:/learn/sgs/` | TCP + protobuf + 录播/观战/重连的历史实现；只作结构参考 |
 | Ursa 治理参考 | `E:/learn/Ursa-Server/`、`E:/learn/Ursa-Client/` | 治理与开发思路来源（见 notes） |
 | 上游算法仓库 | `https://github.com/gaodayihao/majiang_algorithm` | MIT；当前 data 与我们的表语义不同（见 TABLES §4） |

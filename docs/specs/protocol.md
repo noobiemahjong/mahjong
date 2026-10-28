@@ -1,7 +1,7 @@
 # 游戏协议（TCP，v1）
 
 状态：M2 实现；网络协议契约，改字段需 Note + protocolVersion 递增。
-传输：TCP（v1）；LAN 与公网同一协议。帧格式固定，不依赖 Godot 类型。
+传输：TCP（v1），客户端/服务端都用 .NET `System.Net.Sockets` + `System.IO.Pipelines`；**不用 Godot 传输 API**。LAN 与公网同一协议。帧格式固定，不依赖 Godot 类型。
 
 ## 1. 帧
 

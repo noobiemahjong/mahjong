@@ -109,7 +109,7 @@ D1–D18 的推论：
 └───────────────▲───────────────────────────────┬───────────────┘
                 │ SessionStream（每座位）        │ Command（本座位）
 ┌───────────────┴───────────────────────────────▼───────────────┐
-│ 传输层（ITransport）：TCP/WebSocket（v1）；LAN 发现走 UDP       │
+│ 传输层（ITransport）：TCP（.NET Sockets + Pipelines）；LAN 发现走 UDP │
 └───────────────▲───────────────────────────────┬───────────────┘
                 │                               │
 ┌───────────────┴───────────────────────────────▼───────────────┐
@@ -147,7 +147,7 @@ D1–D18 的推论：
 - 会话、重连、观战、版本校验都要自己实现，用不上它；
 - 回合制对传输要求低，自研长度前缀协议更可控、更可测。
 
-结论：**v1 使用自研协议 + TCP/WebSocket**；传输抽象为 `ITransport`，未来可换 LiteNetLib/ENet 而不动上层。
+结论：**v1 使用自研协议 + TCP**，客户端与服务端都用 .NET `System.Net.Sockets` + `System.IO.Pipelines`；不用 Godot 传输 API，不引第三方网络库。传输抽象为 `ITransport`，未来可换 WebSocket/LiteNetLib 而不动上层。见 [Note](../.agents/notes/implemented/architecture/2026-10-28-network-transport.md)。
 
 ### 3.4 NativeAOT 与裁剪（D12：客户端 AOT，服务器 JIT）
 
@@ -582,7 +582,7 @@ Trailer
 | --- | --- | --- | --- |
 | 单机 | **同一进程内**（本地 Session），TCP 都不需要 | 进程内队列 | 无 |
 | 局域网 | 房主进程内（后台逻辑线程）或房主另开无头进程 | TCP（回环/内网） | UDP 广播 |
-| 公网 | VPS 上的 Mahjong.Server（docker） | TCP/WebSocket | 房间码 |
+| 公网 | VPS 上的 Mahjong.Server（docker） | TCP（.NET Sockets） | 房间码 |
 
 > 单机也走“权威 Session + Mirror”这条路径（进程内传输），**不为单机写第二套逻辑**。这是避免“单机好、联机坏”的关键。
 
@@ -608,7 +608,7 @@ Trailer
 - 房间码：6 位字母数字，由服务器生成并维护映射；
 - 客户端直连服务器（无 NAT 问题）；
 - 服务器按房间隔离，单进程多房间（SessionHost 轮询）；
-- 传输 v1 用 TCP（回合制对延迟不敏感）；后续可换 LiteNetLib；
+- 传输 v1 用 TCP（.NET `System.Net.Sockets` + `System.IO.Pipelines`，共享协议码）；后续可经 `ITransport` 换 WebSocket/LiteNetLib；
 - **HTTP 面**（与游戏端口分开）：`POST /rooms`（建房/加入返回房间码）、`GET /replays/{id}`（鉴权下载，支持 Range）、`GET /healthz`；
 - 中继/打洞**不在 v1 范围**：需要“朋友自己开房且无公网 IP”时，再按 EOS Relay / Steam DGS / 自建 UDP 转发 的顺序评估。
 

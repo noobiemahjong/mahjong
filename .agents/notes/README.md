@@ -59,6 +59,7 @@ Status: proposed | implemented | rejected — <一句话原因>
 
 - [设计基线与变更程序](implemented/process/2026-10-28-design-baseline-and-change-procedure.md)
 - [文档治理与开发思路](implemented/process/2026-10-28-governance-and-doc-tiers.md)
+- [v1 网络传输](implemented/architecture/2026-10-28-network-transport.md)
 - [v1 否决的设计方案](rejected/process/2026-10-28-rejected-v1-design-space.md)
 
 模板：[000-template.md](000-template.md)。

@@ -35,7 +35,7 @@
 7. **禁止历史变迁词、状态标注、手抄生成物**；一段一行；Slop 清单见 [docs/AGENTS.md](docs/AGENTS.md)。
 8. **content/tables 禁止手改**；变更需 Note + 金标验证。→ [TABLES](docs/TABLES.md)
 9. **文档超预算**：先下沉、再精简、最后才提额。→ [docs/AGENTS.md](docs/AGENTS.md)
-10. **Godot 工作先探活 Godot MCP**（硬门禁）；C# 符号 Roslyn MCP 优先（可降级）。→ [development](docs/development.md)
+10. **Godot 工作先探活 Godot MCP**（硬门禁）；C# 符号 MCP 优先（若环境提供，可降级）。→ [development](docs/development.md)
 11. **验证匹配改动**：L1/L2/L3 按需跑，不默认全量；汇报只报真正跑过的。→ [development](docs/development.md)
 12. **一任务一 commit，不 push**；做完停下汇报，等确认再下一个。→ [development](docs/development.md)
 13. **旧 Unity 项目不作基线**：不追求行为等价、不登记旧版差异、不记录代码出处。→ [legacy](docs/legacy/README.md)

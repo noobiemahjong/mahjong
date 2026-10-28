@@ -15,7 +15,7 @@
 | .NET SDK | **10.0.401**（`global.json` 已锁） |
 | Godot | **4.7.2 mono/.NET**，本机路径 `D:\Program Files\Godot_v4.7.2-stable_mono_win64\` |
 | Git | 能执行 `git config core.hooksPath`（T-2 后需要） |
-| MCP | Godot MCP（`godot-ai`）与 Roslyn/VS MCP（`vs-mcp-ursa-client`）；开工先探活，见 [development](development.md) |
+| MCP | Godot MCP；C# 符号 MCP（若当前环境提供）。**以实际配置为准，不绑定特定 server 名**；开工先探活，见 [development](development.md) |
 | 内容 | `content/` 已在仓库；查表 6 个 `.bytes` 在 `content/tables/` |
 
 ## 3. 第一次跑起来（M0.1 收口后）

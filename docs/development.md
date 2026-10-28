@@ -21,7 +21,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里�
 |---|---|---|
 | L1 | 构建 + 相关单测（规则/流程/协议） | 每次提交前 |
 | L2 | doc-gate + 构建 + 全量单测 | 改 `docs/` 或提交前；CI 每次 push/PR |
-| L3 | 客户端 AOT 冒烟（导出 + 独立 exe 打一局 + 播回放） + 金标回放 | 每个里程碑收口 |
+| L3 | 客户端 AOT 冒烟（导出 + 独立 exe 打一局 + 播回放） + 金标回放；M5 起加 Android 冒烟（`build-android` + adb install/logcat） | 每个里程碑收口 |
 
 规则：
 

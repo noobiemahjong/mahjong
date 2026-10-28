@@ -74,7 +74,7 @@ public sealed class GameAction
 }
 
 public enum CommandVerb : byte { Discard = 1, Pong = 2, Kong = 3, Win = 4, Pass = 5 }
-public readonly record struct GameCommand(long Seq, byte Seat, CommandVerb Verb, int Slot, ushort CardId, long RequestId);
+public readonly record struct GameCommand(long Seq, long ReceivedTick, byte Seat, CommandVerb Verb, int Slot, ushort CardId, long RequestId);
 public sealed class CommandQueue
 {
     public void Enqueue(GameCommand command);

@@ -72,7 +72,7 @@ D1–D18 的推论：
 | 跨版本联机 | 版本三元组不匹配直接拒绝 |
 | 中途换人/补位 | 只允许原座位重连；观战另走连接 |
 | 主机迁移 | 房主退出即房间结束（公网服务器无此问题） |
-| 移动端 | v1 桌面优先；C#+Godot 移动端导出后续评估 |
+| 移动端 | v1 桌面优先；M5 是 **post-v1** 里程碑（不阻塞 v1），Android 先 |
 | checkpoint / 秒开回放 | v1 不实现，回放拖动用“重放到最近索引”实现 |
 | 录像上传/云存档 | v1 本地文件 |
 
@@ -139,7 +139,7 @@ D1–D18 的推论：
 
 > **目标框架统一 net10.0**。依据：Ursa-Client 实测 Godot 4.7.2 宿主运行时为 .NET 10.0.9，`TargetFramework=net10.0`、`PublishAot` 导出可跑通（其 `docs/reference/AOT导出与裁剪取证.md`）。本机已有 .NET SDK 10.0.401，**不需要 .NET 8**。
 >
-> 只拆 5 个工程：Core 是引擎无关内核；Session 只被 Server 引用；Client 只引用 Core。**AOT 需要 root 的程序集越少越好**（见 §3.4）。未来若 Core 过大，再按 Rules/Flow/Protocol 拆分并同步补 root。
+> 只拆 5 个工程：Core 是引擎无关内核；Client → Session → Core；Server → Session → Core。**AOT 需要 root 的程序集越少越好**（见 §3.4）。未来若 Core 过大，再按 Rules/Flow/Protocol 拆分并同步补 root。
 
 ### 3.3 为什么不用 Godot 的 MultiplayerAPI
 
@@ -180,7 +180,7 @@ D1–D18 的推论：
 4. 依赖注入/装配用手写组合或源生成容器，不用反射容器；
 5. 每个里程碑收尾必须跑一次 **客户端 AOT 冒烟**：`dotnet publish -p:PublishAot=true` → 断言产物无 `coreclr/hostfxr/GodotSharp.dll` → 跑独立 exe → 打一局本地对局并播放一段回放 → stderr 为空。
 
-**服务器发布**：`dotnet publish -c Release`（可选 `--self-contained`），docker 镜像基于 `mcr.microsoft.com/dotnet/runtime`；不引入 AOT 的裁剪问题，启动时间与内存不是瓶颈。
+**服务器发布**：`dotnet publish -c Release`（可选 `--self-contained`），docker 镜像基于 `mcr.microsoft.com/dotnet/aspnet:10.0`（Minimal API 需要 ASP.NET Core 运行时）；不引入 AOT 的裁剪问题，启动时间与内存不是瓶颈。
 
 > 定位：AOT 是客户端**发布加固**，不是安全边界。作弊面由服务端权威 + 可见性过滤解决（见 §6.4）。
 
@@ -272,7 +272,7 @@ tick T      Flow: TurnStarted(A) → RequestOpen(A, {出牌, 技能}, deadline =
 tick T      A 的镜像收到 RequestOpen → 解冻手牌、开始倒计时
 tick T+3    Command(A, Discard{slot=7}) 到达 → 本 tick 校验 → Discard 事件入流
 tick T+3    Flow: GroupOpen(候选 B/C/D, 抢碰/杠, deadline = T+18)
-tick T+4    Command(B, Pong) 到达 → 校验通过 → GroupResolved(B, Pong) → 其余候选 cancel
+tick T+4    Command(B, Pong) 到达 → 校验通过 → 各候选收到 RequestClosed(B 胜 / 其余 cancel)
 tick T+4    Flow: Meld(B) → RequestOpen(B, 强制出牌) → ...
 tick T+150  若 A 一直未应答 → RequestClosed(Timeout) → Flow 自动打出最后一张
 ```
@@ -298,7 +298,7 @@ PendingRequest {
 
 - 同时向最多 3 个候选座位发问，deadline 相同；
 - 首个**合法**应答获胜；其余座位收到 `RequestClosed{cancelled}`；
-- 仲裁结果必须写入流（`GroupResolved{winner, result}`），因为客户端不参与仲裁；
+- 仲裁结果写入流：每个候选一条 `RequestClosed{outcome}`（胜者 answered、其余 cancelled），客户端不参与仲裁；
 - 同到达顺序的公平性：按服务端到达顺序；若同一 tick 内到达，按座位号升序（显式规则，便于测试）。
 
 ### 5.4 随机与确定性
@@ -311,7 +311,7 @@ PendingRequest {
 
 ### 5.5 Bot
 
-- Bot 是服务端的一种 `IAnswerPolicy`：走与真人**完全相同**的请求/应答路径；
+- Bot 是一种 `IBotPolicy`：走与真人**完全相同**的请求/应答路径；
 - Bot 的答案作为普通答案写进流，客户端不运行 Bot 代码；
 - 断线托管 = 把该座位临时切到 Bot 策略，玩家回来再切回；
 - 托管期间所有行为同样入流，回放/观战无差异。
@@ -371,9 +371,8 @@ PendingRequest {
 | Reveal | 单个或多个 TileRef 的身份揭示 |
 | RequestOpen | 请求（仅目标座位可见），含 deadlineTick 与 allowedVerbs |
 | RequestClosed | 请求结算（目标座位） |
-| GroupResolved | 多人竞速结果（公开） |
 | UIState | detached / attached（追帧用） |
-| SessionEnd | 结束原因与最终结果、回放文件标识 |
+| GameEnded | 结束原因与最终结果、回放文件标识 |
 | Pong | 心跳应答 |
 
 **客户端 → 服务端**
@@ -490,7 +489,7 @@ UIState(detached)
 - 复用客户端 Mirror；输入源换成 `FileStream + ReplayClock`；
 - 回放界面：顶部 8 局列表（局号 / 赢家 / 分数变化）+ 中部时间轴 + 底部播放控制（速度档、上一局/下一局、±5s）；
 - 基础控制：播放 / 暂停 / 0.5x–8x 倍速 / 逐帧（tick）前进 / 逐事件前进；
-- **选局**：回放 UI 显示 8 局列表（第几轮、赢家、分数变化），点击第 N 局 = 从头静默重放到该轮起点（不渲染），然后进入正常播放；
+- **选局**：回放 UI 显示 8 局列表（第几轮、赢家、分数变化），点击第 N 局 = 从头静默重放到该局起点（不渲染），然后进入正常播放；
 - **快进/快退**：`±5s` / `±1 轮` / 拖动进度条，全部实现为“从头静默重放到目标 tick 再继续播放”；
 - 之所以敢这么做：8 局全量重放 < 200ms（D3 无 checkpoint）；Index 只用于定位帧边界，**不用于恢复状态**；
 - 预留 `index.checkpoints` 扩展位：若未来单局事件量增长到重放 > 300ms，再按需加入每轮一次的状态快照（格式向后兼容）；
@@ -499,10 +498,10 @@ UIState(detached)
 
 ### 8.4 录制、保留与下载
 
-- 服务端在 `SessionEnd` 时把 panorama 流落盘到 `replays/`（局域网宿主为房主机器，公网为服务器）；
+- 服务端在 `GameEnded` 时把 panorama 流落盘到 `replays/`（局域网宿主为房主机器，公网为服务器）；
 - **单机同样录制全景流**（本地 Session 直接写盘），保证单机对局也能回放；
 - **保留策略（D8）**：服务器保留**最近 30 局**（可配置），环形淘汰；目录带 `manifest.json`（对局时间、房间、玩家、版本、文件大小），启动时校验并修复；
-- **下载（D8/D14）**：对局结束后 `GameEnded` 里下发 `replayId + downloadUrl + 一次性 token`；客户端通过 HTTP `GET` 下载（支持 `Range` 续传），落地到本地 `replays/` 后由本地回放器打开；
+- **下载（D8/D14）**：对局结束后 `GameEnded` 可带 `replayId`；客户端通过 `GET /replays` 列表 + `POST /replays/{id}/token` 获取一次性 token，再 `GET /replays/{id}?token=` 下载（支持 `Range`），落地到 `user://replays/`（Client 用 `ProjectSettings.GlobalizePath` 后交给 ReplayPaths）；
 - 一次性 token 先做简单版：服务端内存表持有（replayId → token、过期时间、已使用标记），默认 **10 分钟有效、下载成功即失效**；不做账号绑定、不做分享链接；
 - 局域网形态：房主进程同时提供这个 HTTP 端点（与房间发现/加入共用端口或独立端口）；
 - 文件命名：`{yyyyMMdd-HHmmss}-{roomId}-{replayId}.mjr`（单机 roomId=local）；文件大小预估：8 局全景流 ≈ 100–300KB（未压缩），Brotli 后 ≈ 30–100KB；
@@ -553,7 +552,7 @@ UIState(detached)
 5. **托管交接（D5）**：玩家回来时若 Bot 正在等待该座位的请求，立即取消 Bot 应答、把请求交还玩家，deadline 重置为完整时长（避免“刚回来就超时”）。
 6. **整理局托管（D6）**：宽限期满后 Bot 一直打到本场结束；期间任何时刻玩家重连都立即交还，不因为“已经过了几局”拒绝。
 7. **边界情况**：
-   - 对局已结束：返回 `SessionEnd` + 回放文件标识，不再恢复座位；
+   - 对局已结束：返回 `GameEnded` + 回放文件标识，不再恢复座位；
    - 重连时座位上已有新玩家：不可能（v1 不允许换人），只可能是 token 错误，拒绝；
    - 同一 token 重复连接：踢掉旧连接（最后一次连接生效）。
 
@@ -594,7 +593,7 @@ UIState(detached)
 - 客户端直连服务器（无 NAT 问题）；
 - 服务器按房间隔离，单进程多房间（SessionHost 轮询）；
 - 传输 v1 用 TCP（.NET `System.Net.Sockets` + `System.IO.Pipelines`，共享协议码）；后续可经 `ITransport` 换 WebSocket/LiteNetLib；
-- **HTTP 面**（与游戏端口分开）：`POST /rooms`（建房/加入返回房间码）、`GET /replays/{id}`（鉴权下载，支持 Range）、`GET /healthz`；
+- **HTTP 面**（与游戏端口分开）：`POST /rooms`、`POST /rooms/{code}/join`、`POST /rooms/{code}/start`、`GET /rooms`、`GET /replays`、`POST /replays/{id}/token`、`GET /replays/{id}?token=`（Range）、`GET /healthz`；
 - 中继/打洞**不在 v1 范围**：需要“朋友自己开房且无公网 IP”时，再按 EOS Relay / Steam DGS / 自建 UDP 转发 的顺序评估。
 
 ### 11.4 部署与运维
@@ -654,7 +653,7 @@ mahjong/
   src/
     Mahjong.Core/            # 引擎无关内核（net10，无 Godot 引用）
       Rules/  Flow/  Protocol/  Content/
-    Mahjong.Session/         # 权威会话（net10，仅 Server 引用）
+    Mahjong.Session/         # 权威会话（net10，Client/Server 引用）
     Mahjong.Client/          # Godot 项目（project.godot 在此，net10 + PublishAot）
     Mahjong.Server/          # 无头宿主（net10，普通 JIT 发布）
     Mahjong.Tests/           # xUnit（net10）
@@ -719,7 +718,7 @@ mahjong/
 | M2 | 局域网：发现、房主内嵌服务器、30s 托管、重连、观战（[计划](milestones/M2-局域网.md)） | 断网 30s 后 Bot 接管、60s 回来立即交还且状态一致；第三人可中途观战；两房间同时在线不串数据 |
 | M3 | 公网：无头服务器、房间码、版本握手、回放下载与保留 30 局（[计划](milestones/M3-公网服务器.md)） | 3 个跨网络客户端打完一场；赛后客户端下载并播放；版本不匹配被正确拒绝 |
 | M4 | 打磨：Bot 优化、回放浏览器、性能/内存、音频/基础美术（[计划](milestones/M4-打磨.md)） | 50 房间压测达标；选局/拖动 < 300ms；**先测出 Bot 表基线（内存/冷加载/单步决策），再据此定优化目标并复测** |
-| M5 | 移动端：Android 优先（触摸/DPI/内存/启动时间）；Godot + net10 + AOT 链路验证（[计划](milestones/M5-移动端.md)） | 真机跑完一局 + 播放回放；无桌面专用交互；帧率/内存达标 |
+| M5 | 移动端（post-v1）：Android 优先（触摸/DPI/内存/启动时间）；Godot + net10 + AOT 链路验证（[计划](milestones/M5-移动端.md)） | 真机跑完 8 局 + 播放回放；无桌面专用交互；帧率/内存达标 |
 
 > 本表只保留一行摘要；M0.1/M0.2 的范围、任务、验收与完成定义以各自计划为准。
 
@@ -748,7 +747,7 @@ mahjong/
 D1–D18 已全部拍板。剩下的是“实现后才有数据”或“以后再定”的项，不阻塞 M0.1/M0.2：
 
 1. **Bot 基线口径（D17）**：M0.2 结束时测一套基线（常驻内存、冷加载耗时、单步决策耗时、单局耗时），M4 据此定优化目标并复测；现在不预设数字。
-2. **M5 移动端**：平台顺序与最低配置（建议 Android 先，最低版本/机型在 M5 启动时定）；Godot 4.7.2 + net10 + AOT 的 Android 链路需实测，iOS 更晚。
+2. **M5 移动端**：平台顺序与最低配置（Android 先；minSdk 26、arm64-v8a、4GB RAM 中端机，见 M5 规格）；Godot 4.7.2 + net10 + AOT 的 Android 链路需 T-0 实测，iOS 更晚。
 3. **回放自动下载**：默认“赛后弹窗询问”，是否提供“自动下载最近一局”开关（建议 M3 再定）。
 4. **局域网房主退出后**：v1 直接结束房间回大厅，不实现“继任房主/重开”；若朋友局高频遇到，再评估。
 5. **语音**：确认不内置语音聊天（D15），文档/UI 提示玩家使用外部语音工具。

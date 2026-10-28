@@ -26,8 +26,8 @@ M0.2 不使用旧美术；牌用 `Panel` + `Label`（花色/点数）+ 鬼牌红
 
 ## 2. 视图与 Mirror
 
-- `GameMirror`：消费 `DrainEvents(viewerSeat)`，维护 `MirrorState`（手牌/弃牌/副露/分数/回合/请求）。
-- `TableController`：每帧 `session.Step`（10Hz），Drain 事件 → 更新视图；输入 → `Command`。
+- 单机 Client 与 `GameSession` 同进程：直接读 `GameSession.State` + `DrainEvents(viewerSeat)` 做投影，**不建第二套 Flow/Mirror**（见 Note 2026-10-28-local-view-vs-mirror）。
+- `TableController`：按 10Hz 调 `session.Step`，用 State/事件刷新视图；输入 → `Command`。
 - 输入抽象 `Mahjong.Client/Input/`：`IPointerSource`（Down/Move/Up）、`ClickRouter`；鼠标与触摸各一实现；UI 只能通过 `InputRouter` 发 `Command`，禁止直接改 Session。
 - 手牌展示排序：普通牌按 `Type.Id`，鬼牌最后；**不改会话 zone 顺序**。
 - 请求：`RequestOpened` 决定哪些按钮可点；非法操作按钮禁用。

@@ -2,5 +2,7 @@ bin/
 obj/
 build/
 replays/
+src/Mahjong.Client/content/
 .reviews/
 *.user
+.reviews2/

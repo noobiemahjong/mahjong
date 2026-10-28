@@ -7,7 +7,7 @@
 - UDP 默认端口 **47777**（可通过配置覆盖；同一机器跑多个房间时必须用不同端口）。
 - 请求：`MJDP` + `v1 u8` + `nonce u32`（≤32B）。
 - 应答：`MJDP` + `v1` + `nonce` + u8 房间名长度 + 房间名 UTF8 + u8 房主名长度 + 房主名 UTF8 +
-  `players u8` + `maxPlayers u8` + `gamePort u16` + `protocolVersion u16` + `rulesVersion u16` +
+  `roomCode 6B`（ASCII）+ `players u8` + `maxPlayers u8` + `gamePort u16` + `protocolVersion u16` + `rulesVersion u16` +
   `contentHash 32B` + `tickRate u8` + `flags u8`（bit0 有密码、bit1 对局中）。
 
 ## 2. 发现流程

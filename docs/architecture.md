@@ -11,7 +11,7 @@
 | 工程 | 职责 | 边界 |
 |---|---|---|
 | `Mahjong.Core` | 规则、Flow、协议、内容 | 不引用 Godot/网络/真实时钟 |
-| `Mahjong.Session` | 权威会话、流产出、回放录制 | 只被 Server 引用 |
+| `Mahjong.Session` | 权威会话、流产出、回放录制；单机/房主在 Client 进程内 | Client/Server 引用 |
 | `Mahjong.Client` | Godot 宿主、Mirror、表现、回放播放；单机/房主内嵌 Session | 引用 Session → Core |
 | `Mahjong.Server` | 房间、传输、发现、HTTP | 引用 Session/Core |
 
@@ -34,7 +34,7 @@
 
 - 技能：`Skill` + 内容配置；新增不改协议。
 - 内容：`ContentCatalog`；改表需 Note + 金标验证。
-- Bot：服务端 `IAnswerPolicy`，与真人同通道。
+- Bot：`IBotPolicy`，与真人同通道；服务端/本地会话都可注入。
 - 回放/观战：同一流的消费者，不改规则。
 
 ## 子系统页

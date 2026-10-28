@@ -13,6 +13,7 @@
 </PropertyGroup>
 <ItemGroup>
   <TrimmerRootAssembly Include="Mahjong.Client" />
+  <TrimmerRootAssembly Include="Mahjong.Session" />
   <TrimmerRootAssembly Include="Mahjong.Core" />
   <TrimmerRootAssembly Include="GodotSharp" />
 </ItemGroup>

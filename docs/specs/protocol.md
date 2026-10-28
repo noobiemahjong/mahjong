@@ -27,15 +27,16 @@
 
 ## 2. 握手/加入
 
-- C→S `Hello`：`protocolVersion u16, rulesVersion u16, contentHash 32B, playerToken 32B（首次为全 0）, role u8（0 玩家/1 观战）, roomCodeLen u8 + roomCode UTF8, passwordLen u8 + password UTF8, nameLen u16 + name UTF8, avatarId u16`。
-- S→C `Welcome`：`selfSeat u8（观战=255）, playerToken 32B（首次加入由服务端生成；Resume 时回显）, roomCode 6B, tickRate u8, settingsCount u16 + (keyLen u16+UTF8 key + valLen u16+UTF8 val)[]`。
-- S→C `Reject`：`reason u8`：0 protocol、1 rules、2 content、3 room full、4 password、5 token invalid、6 room not found。
+- C→S `Hello`：`protocolVersion u16, rulesVersion u16, contentHash 32B, playerToken 32B（首次为全 0）, role u8（0 玩家/1 观战）, roomCodeLen u8 + roomCode UTF8（单房间 LAN 可为 0）, passwordLen u8 + password UTF8, nameLen u16 + name UTF8, avatarId u16`。
+- S→C `Welcome`：`selfSeat u8（观战=255）, playerToken 32B（首次加入由服务端生成；Resume 时回显）, roomCodeLen u8 + roomCode, tickRate u8, settingsCount u16 + (keyLen u16+UTF8 key + valLen u16+UTF8 val)[]`。
+- settings 键（v1）：`rules`、`turnTimeoutTicks`、`responseTimeoutTicks`、`spectatorLimit`、`omniscientSpectator`（0/1）、`roomCode`。
+- S→C `Reject`：`reason u8`：0 protocol、1 rules、2 content、3 room full、4 password、5 token invalid、6 room not found、7 spectator full。
 - 握手阶段 5s 超时；失败断开。`roomCode/password` 由 HTTP 建房/加入流程获得（M3）；LAN 房主可固定房间码。
 
 ## 3. 命令/事件
 
 - C→S `Command`：`requestId i64, clientSeq i64, verb u8, slot u16, cardId u16`。
-  - verb：1 Discard、2 Pong、3 Kong、4 Win、5 Pass。
+  - verb：1 Discard、2 Pong、3 Kong、4 Win、5 Pass、6 Start（房主）、7 Ready。
   - 服务端按 `(seat, requestId)` 幂等；重复返回上次结果。
 - S→C `Batch`：`tick i64, seqBase i64, count u16, (eventType u8, payload)[]`；`seqBase` 为本批第一帧 seq，客户端可算后续 seq。
 - `eventType` 与 [M1 StreamEventKind](../milestones/M1-实施规格.md) 数值一致：0x10 RoundStarted、0x11 TurnStarted、0x12 Drew、0x13 Discarded、0x14 Meld、0x15 RequestOpened、0x16 RequestClosed、0x17 RoundEnded、0x18 GameEnded、0x19 SeatStateChanged。payload 字段以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md) 为唯一权威。

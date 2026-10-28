@@ -16,7 +16,7 @@ vibe coding 项目的维护性取决于「下一个 agent 能否不猜」。参�
 2. **docs/**：写当前事实与规格。tier 固定为 architecture（当前地图）/ subsystems（实现后按子系统建页）/ cookbook（操作步骤）/ postmortem（事故）/ DESIGN（目标设计基线）/ TABLES+reference（数据与证据）/ milestones（计划结果）/ legacy（旧项目历史资料，仅素材）。
 3. **.agents/notes/**：只写决策的 why、放弃的方案、后果；路径编码 lifecycle/class，禁止总索引。
 4. **不采用**：旧 Unity 行为等价/差异登记、代码出处/逆向地址锚点、Java 基线/submodule、49 篇 ADR 规模、GitHub Issue 镜像、red-test/变异台账、doc-slim 全量普查。
-5. **验证分层**：L1 构建+相关单测；L2 doc-gate+全量单测；L3 AOT 冒烟+金标回放。门禁规范先立，`tools/doc-gate` 在 M0 交付，未实现前不声称已跑。
+5. **验证分层**：L1 构建+相关单测；L2 doc-gate+全量单测；L3 AOT 冒烟+金标回放。门禁规范先立，`tools/doc-gate` 在 M0.1 交付，未实现前不声称已跑。
 6. **开发思路**：内核与引擎分离；先 spike/量测再承诺；设计先行；小步可验收；任务单元化；做完停下汇报；不 push。
 
 ## Alternatives considered
@@ -29,6 +29,6 @@ vibe coding 项目的维护性取决于「下一个 agent 能否不猜」。参�
 
 ## Consequences
 
-- M0 必须交付 `tools/doc-gate`、commit-msg hook、CI（构建 + 单测 + 文档门禁，无 paths 过滤）。
+- M0.1 必须交付 `tools/doc-gate`、commit-msg hook、CI（构建 + 单测 + 文档门禁，无 paths 过滤）。
 - 文档预算按类别设上限；超了先下沉、再精简、最后提额。
 - 治理成本若持续压过开发，按本 Note 的「不采用」清单继续收窄，而不是加规则。

@@ -7,7 +7,7 @@
 ## 文档
 
 - [目标设计 v1.0](docs/DESIGN.md)：架构、tick 引擎、会话流协议、全景回放、断线重连、部署与里程碑
-- [当前实现地图](docs/architecture.md)：M0 起随代码更新
+- [当前实现地图](docs/architecture.md)：M0.1 起随代码更新
 - [文档标准](docs/AGENTS.md)：tier、写作规则、预算、门禁
 - [Agent Notes](.agents/notes/README.md)：决策的 why、放弃的方案
 - [里程碑](docs/milestones/README.md) / [事故复盘](docs/postmortem/README.md)
@@ -26,7 +26,7 @@
 ## 状态
 
 - 决策 D1–D18 已拍板（见设计稿 §0）
-- 待办：[M0 计划](docs/milestones/M0-工程骨架与单机最小闭环.md)（工程骨架 + 规则子集 + 单机最小闭环 + AOT/CI/doc-gate）
+- 待办：[M0.1 工程底座](docs/milestones/M0.1-工程底座与内核骨架.md) → [M0.2 单机闭环](docs/milestones/M0.2-单机可玩闭环.md)
 
 ## 构建前提
 

@@ -141,15 +141,15 @@ key gui jiang hu [description...]
 
 ---
 
-## 5. 后续工具与计划（M0 / M4）
+## 5. 后续工具与计划（M0.1 / M4）
 
 | 工具 | 时机 | 作用 |
 | --- | --- | --- |
-| `tools/table-inspect` | M0 | 把 .bytes 解码为 JSONL（含 key 的 rank 数组），固化 schema，可 diff、可人工检查 |
+| `tools/table-inspect` | M0.1 | 把 .bytes 解码为 JSONL（含 key 的 rank 数组），固化 schema，可 diff、可人工检查 |
 | `tools/table-diff` | M4 | 对比两套表（全 key/全行），输出差异报告；用于验证“重写的生成器是否复现旧表” |
 | `tools/table-gen` | M4（可选） | 重写生成器（C# net10），以现有 .bytes 为金标准；通过 `table-diff` 后才允许替换 |
 
-- 决策：**M0–M3 不动表**；M4 才评估“是否值得重写生成器”。
+- 决策：**M0.1–M3 不动表**；M4 才评估“是否值得重写生成器”。
 - 若你哪天找回当年的 C# 生成器仓库：先跑 `table-diff` 验证它能复现现有 .bytes，再决定是否采用。
 - 任何表数据变更都必须提升 `contentHash` 与 `rulesVersion`（设计稿 §6.5）。
 

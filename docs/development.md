@@ -7,8 +7,8 @@
 当前未开工，以下命令在 M0.1 落地后逐项生效：
 
 ```sh
-dotnet build src/Mahjong.sln          # L1 构建
-dotnet test  src/Mahjong.sln          # L1 单测
+dotnet build Mahjong.sln              # L1 构建
+dotnet test  Mahjong.sln              # L1 单测
 pwsh -File tools/doc-gate/doc-gate.ps1 -Fail   # L2 文档门禁
 pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里程碑收口）
 ```

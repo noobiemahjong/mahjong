@@ -1,7 +1,7 @@
 # T-5 tick 引擎（实施规格）
 
-状态：未开工
-依赖：T-1
+状态：见任务表
+依赖：T-1、T-4（`GameState`/模型）
 对应 master：[M0.1](../M0.1-工程底座与内核骨架.md)
 验收：Action 状态语义、调度顺序、请求/中断、状态哈希、无静态状态、微基准全部通过。
 
@@ -51,12 +51,46 @@ public sealed class ActionScheduler
     public ActionScheduler(IRequestRegistry requests, int maxStepsPerTick = 10_000);
     public bool IsRunning { get; }
     public object? Result { get; }
-    public void Start(IEnumerator<ActionState> root, string name);
+    public void Start(GameAction root);
     public void Step(long tick);
 }
 ````
 
-`GameEventArgs` 本阶段只放 `object? Payload` 与 `GameState State`；M0.2 再扩展。
+`GameEventArgs` 本阶段放 `GameState State` 与 `object? Payload`；M0.2 再扩展。
+
+### 1.1 动作/命令/请求类型（必须定义）
+
+```csharp
+public sealed class GameAction
+{
+    public long Id { get; }
+    public string Name { get; }
+    public int Priority { get; }
+    public GameAction? Parent { get; }
+    public IEnumerator<ActionState> Routine { get; }
+    public bool Completed { get; internal set; }
+    public void AddChild(GameAction child);
+    public bool Interruptible { get; }
+}
+
+public enum CommandVerb : byte { Discard = 1, Pong = 2, Kong = 3, Win = 4, Pass = 5 }
+public readonly record struct GameCommand(long Seq, byte Seat, CommandVerb Verb, int Slot, ushort CardId, long RequestId);
+public sealed class CommandQueue
+{
+    public void Enqueue(GameCommand command);
+    public IReadOnlyList<GameCommand> DrainForTick(long tick);
+}
+
+public enum RequestKind : byte { Discard, Pong, Kong, Win, Pass }
+public readonly record struct PendingRequest(long RequestId, byte Seat, RequestKind Kind, ushort AllowedVerbs, long DeadlineTick);
+public sealed class RequestGroup
+{
+    public IReadOnlyList<PendingRequest> Requests { get; }
+    public long RequestGroupId { get; }
+}
+```
+
+> 根动作由 Flow 构造，子动作由 `AddChild` 挂载。
 
 ## 2. Step 语义（必须按此实现）
 
@@ -64,6 +98,7 @@ public sealed class ActionScheduler
 
 1. 无 current → 结束。
 2. current 已完成且有 parent → current = parent，继续。
+2.1 已完成动作不得再执行；abort 时必须清空其子队列与阻塞状态。
 3. current 有子动作 → 取优先级最高（同优先级按创建序号）→ current = 子，继续。
 4. 若 current 处于阻塞：
    - `WaitTicks`：`tick < wakeTick` 则返回；否则解除，继续。
@@ -100,7 +135,8 @@ public sealed class ActionScheduler
 
 ## 4. 无静态状态
 
-测试用反射扫描 `Mahjong.Core` 与 `Mahjong.Session` 程序集：除 `const` 外，任何 static 字段（含 readonly）都判失败；需要缓存时放实例字段或注入。
+测试用反射扫描 `Mahjong.Core` 与 `Mahjong.Session`：允许 `const` 与 `static readonly` 的不可变值/委托（如 `ActionState.Continue`），禁止 static 非 readonly、static 可变集合/缓存；需要缓存时放实例字段或注入。
+- 本任务依赖 T-4 的 `GameState`，因此 master 的并行建议改为 T-5 在 T-4 之后。
 
 ## 5. 测试与微基准
 
@@ -109,3 +145,7 @@ public sealed class ActionScheduler
 - 中断：abort 后子动作不再执行；Complete 后结果正确且整棵树停止。
 - 确定性：同一脚本跑两遍状态哈希一致；两个调度器交错 Step 不串状态。
 - 微基准：一个 1,000,000 步的简单循环，记录 ns/step（Stopwatch，3 次取中位数）。
+
+## 实施记录
+
+开工后在此追加：日期、实际改动、验证命令与结果、偏差/后续。

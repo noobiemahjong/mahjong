@@ -33,3 +33,4 @@
 
 - Godot 4.7.2（mono / .NET 版）
 - .NET SDK 10（客户端 net10.0 + NativeAOT；服务器 JIT 发布）
+- Windows AOT：MSVC C++ 工作负载 + Windows 10 SDK（M0.1 T-6 冒烟前置）

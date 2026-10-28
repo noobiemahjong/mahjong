@@ -61,7 +61,7 @@ key = (((count[0] * 10 + count[1]) * 10 + count[2]) ... )
 | `hasWin` | 该分解在 `needGui` 张鬼牌下**直接成胡**；此时 `hupai` 为空 |
 | `hupai` | 未成胡时，各 rank 的“补张”张数（数组长度 normal=9 / wind=4 / dragon=3）；全 1 表示任意一张该花色都可 |
 
-例：key `1210220` → `[[4, true, false, [1,1,1,1,1,1,1,1,1]]]` 表示“该 8 张牌型，配 4 张鬼牌、且有将时，任意一张万子都能胡”。
+例：key `1210220` → `[[2,true,false,[0,1,1,1,1,1,1,1,1]],[3,false,false,[0,1,1,1,1,1,1,1,1]],[3,true,true,[]],[4,false,true,[]]]`。这是 4 种分解：前两行是“未成胡、需补某张万子”，后两行是“直接成胡”。（2026-10-28 对 `.bytes` 实读；旧文档曾误写成单行 `[4,...]`。）
 
 ### 2.3 牌效表行（ai_dictionary_*）
 
@@ -127,7 +127,7 @@ key gui jiang hu [description...]
 
 | 来源 | 行 |
 | --- | --- |
-| 本仓库 `dictionary_normal` | `[4, jiang=true, hasWin=false, [1×9]]` |
+| 本仓库 `dictionary_normal` | `[2,true,false,[0,1×8]]`、`[3,false,false,[0,1×8]]`、`[3,true,true,[]]`、`[4,false,true,[]]`（4 行） |
 | 上游 `clien`（当前） | `5 1 111111111`、`2 1 11111111`、`4 0 -1` |
 | 上游 `server`（当前） | 同上三行 + 描述 |
 

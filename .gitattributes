@@ -12,4 +12,6 @@
 *.pdb binary
 *.exe binary
 *.zip binary
+*.apk binary
+*.mjr binary
 tools/git-hooks/* text eol=lf

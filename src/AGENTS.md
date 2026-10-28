@@ -8,11 +8,11 @@
 |---|---|---|
 | `Mahjong.Core` | 引擎无关内核：规则/Flow/协议/内容/查表接口 | `net10.0`，**不引用 Godot** |
 | `Mahjong.Session` | 权威会话：座位、流产出、请求/超时/托管、回放录制 | `net10.0` |
-| `Mahjong.Client` | Godot 宿主：视图/输入/音频/Mirror/回放播放器 | `net10.0` + `PublishAot` |
+| `Mahjong.Client` | Godot 宿主：视图/输入/音频/Mirror/回放播放器；单机/房主内嵌 Session | `net10.0` + `PublishAot` |
 | `Mahjong.Server` | 无头宿主：房间、传输、发现、HTTP | `net10.0`，普通 JIT 发布 |
 | `Mahjong.Tests` | xUnit：规则/流程/回放/断线/多房间隔离 | `net10.0` |
 
-- 依赖方向：Client → Core；Server → Session → Core；Core 不反向依赖任何宿主。
+- 依赖方向：Client → Session → Core；Server → Session → Core；Core 不反向依赖任何宿主。
 - 规则/流程/协议不得引用 `Godot`、`UnityEngine`、真实时钟、网络 API、静态全局状态。
 - 新增工程/程序集必须同步「AOT 与序列化」的 root 清单，并在 [docs/architecture.md](../docs/architecture.md)（实现后）登记。
 

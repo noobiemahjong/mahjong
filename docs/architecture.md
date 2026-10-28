@@ -12,7 +12,7 @@
 |---|---|---|
 | `Mahjong.Core` | 规则、Flow、协议、内容 | 不引用 Godot/网络/真实时钟 |
 | `Mahjong.Session` | 权威会话、流产出、回放录制 | 只被 Server 引用 |
-| `Mahjong.Client` | Godot 宿主、Mirror、表现、回放播放 | 只引用 Core |
+| `Mahjong.Client` | Godot 宿主、Mirror、表现、回放播放；单机/房主内嵌 Session | 引用 Session → Core |
 | `Mahjong.Server` | 房间、传输、发现、HTTP | 引用 Session/Core |
 
 ## 核心循环

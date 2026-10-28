@@ -24,7 +24,7 @@
 | D5 | 断线托管 | 断线 **30s** 后 Bot 接管；玩家回来**立即交还** | 会话 |
 | D6 | 托管范围 | 玩家超时未归 → **整局托管**，Bot 打完本场 | 会话 |
 | D7 | 观战 | 上限 **8**；公网允许身份盲观战；全知观战仅私有房开关 | 观战 |
-| D8 | 回放分发 | 服务器保留**最近 30 局**；赛后客户端下载；支持选轮与快进快退 | 回放/服务端 |
+| D8 | 回放分发 | 服务器保留**最近 30 局**；赛后客户端下载；支持选局与快进快退 | 回放/服务端 |
 | D9 | 人数 | **固定 4 人**；不足用 Bot 补位 | 会话/UI |
 | D10 | Bot 表 | 先沿用旧表跑通（已迁移到 content/tables/，见 TABLES.md），M4 再评估重写生成器 | 内容/算法 |
 | D11 | 音频 | v1 仅中文（旧项目只有 Mandarin，男/女两套，共 83 个 mp3） | 内容 |
@@ -93,7 +93,7 @@ D1–D18 的推论：
 | TileRef | (zone, slot, tileId)；tileId = -1 表示对该消费者不可见 |
 | Reveal | 把某个 TileRef 的身份揭示给某条流 |
 | PendingRequest | 服务端正在等待某个座位作答的请求（含 deadline tick） |
-| RequestGroup | 同时向多个座位发问、取首个合法响应的请求组（碰/杠/胡竞速） |
+| RequestGroup | 同时向多个座位发问、取首个合法响应的请求组（碰/杠竞速；自摸不走响应窗口） |
 
 ---
 
@@ -133,7 +133,7 @@ D1–D18 的推论：
 | --- | --- | --- | --- |
 | Mahjong.Core | net10.0 | 引擎无关内核：牌/区域/规则/Flow/协议/内容/查表 | 无（纯 C#，不引用 Godot） |
 | Mahjong.Session | net10.0 | 权威会话：座位、流产出、请求/超时/托管、回放录制与写盘 | Core |
-| Mahjong.Client | net10.0（Godot.NET.Sdk/4.7.2 + PublishAot） | Godot 宿主：视图/输入/音频/Mirror/回放播放器 | Core |
+| Mahjong.Client | net10.0（Godot.NET.Sdk/4.7.2 + PublishAot） | Godot 宿主：视图/输入/音频/Mirror/回放播放器；单机/房主内嵌 Session | Session |
 | Mahjong.Server | net10.0（普通 JIT 发布） | 无头宿主：房间、传输、发现、HTTP（房间码/回放下载） | Session |
 | Mahjong.Tests | net10.0 | xUnit：规则/流程/金标回放/断线/多房间隔离/AOT 冒烟 | Core / Session |
 
@@ -162,6 +162,7 @@ D1–D18 的推论：
 </PropertyGroup>
 <ItemGroup>
   <TrimmerRootAssembly Include="Mahjong.Client" />
+  <TrimmerRootAssembly Include="Mahjong.Session" />
   <TrimmerRootAssembly Include="Mahjong.Core" />
   <TrimmerRootAssembly Include="GodotSharp" />
 </ItemGroup>
@@ -270,7 +271,7 @@ VisibilityPolicy:
 tick T      Flow: TurnStarted(A) → RequestOpen(A, {出牌, 技能}, deadline = T+150)
 tick T      A 的镜像收到 RequestOpen → 解冻手牌、开始倒计时
 tick T+3    Command(A, Discard{slot=7}) 到达 → 本 tick 校验 → Discard 事件入流
-tick T+3    Flow: GroupOpen(候选 B/C/D, 抢碰/杠/胡, deadline = T+18)
+tick T+3    Flow: GroupOpen(候选 B/C/D, 抢碰/杠, deadline = T+18)
 tick T+4    Command(B, Pong) 到达 → 校验通过 → GroupResolved(B, Pong) → 其余候选 cancel
 tick T+4    Flow: Meld(B) → RequestOpen(B, 强制出牌) → ...
 tick T+150  若 A 一直未应答 → RequestClosed(Timeout) → Flow 自动打出最后一张
@@ -293,7 +294,7 @@ PendingRequest {
 - 超时：到达 deadlineTick 时自动关闭，结果为 `Timeout`，由 Flow 决定“自动打最后一张/过”；
 - 幂等：同一 requestId 的重复应答只取第一次，后续丢弃并记日志。
 
-**RequestGroup（碰/杠/胡竞速）：**
+**RequestGroup（碰/杠竞速；无点炮/荣和）：**
 
 - 同时向最多 3 个候选座位发问，deadline 相同；
 - 首个**合法**应答获胜；其余座位收到 `RequestClosed{cancelled}`；
@@ -477,35 +478,19 @@ UIState(detached)
 
 ### 8.2 文件格式
 
-```
-Header (定长 + 变长)
-  magic        "MJRP"
-  formatVer    1
-  protocolVer  1
-  rulesVer     1
-  contentHash  32B
-  seed         int64        （审计用）
-  tickRate     10
-  createdAt     int64
-  playerCount  byte
-  seats[]      { playerToken 哈希, 昵称, 头像 id, 是否 Bot }
-  settings     房间设置
-Body
-  frame[]      与 SessionStream 完全同构的帧（panorama）
-Index
-  (tick, byteOffset)      每 5 秒一条（定位帧边界用）
-  rounds[] { roundNo, startTick, firstFrameOffset, winnerSeat }   # 选轮用
-  eventsTotal, ticksTotal
-Trailer
-  frameCount, sha256(body)
-```
+**唯一权威**：[docs/specs/replay-format.md](specs/replay-format.md)（magic `MJR1`、扩展名 `.mjr`、Header/Body/Index/Trailer 81B）。本节只保留摘要：
+
+- Header：format/protocol/rules 版本、contentHash 32B、tickRate、seed（审计）、seats、settings。
+- Body：`u32 length + u8 type + payload` 的事件帧；type 与 M0.2 T-5 §1.1 事件表一致。
+- Index：rounds[]（局号/startTick/首帧偏移/赢家/分数变化）+ checkpoints（M1 为空）。
+- Trailer 81B：indexOffset/indexLength/frameCount/finalStateHash/flags(completed)/sha256(body)。
 
 ### 8.3 播放器与控制
 
 - 复用客户端 Mirror；输入源换成 `FileStream + ReplayClock`；
-- 回放界面：顶部 8 轮局列表（第几轮 / 赢家 / 分数变化）+ 中部时间轴 + 底部播放控制（速度档、上一轮/下一轮、±5s）；
+- 回放界面：顶部 8 局列表（局号 / 赢家 / 分数变化）+ 中部时间轴 + 底部播放控制（速度档、上一局/下一局、±5s）；
 - 基础控制：播放 / 暂停 / 0.5x–8x 倍速 / 逐帧（tick）前进 / 逐事件前进；
-- **选轮**：回放 UI 显示 8 轮列表（第几轮、赢家、分数变化），点击第 N 轮 = 从头静默重放到该轮起点（不渲染），然后进入正常播放；
+- **选局**：回放 UI 显示 8 局列表（第几轮、赢家、分数变化），点击第 N 局 = 从头静默重放到该轮起点（不渲染），然后进入正常播放；
 - **快进/快退**：`±5s` / `±1 轮` / 拖动进度条，全部实现为“从头静默重放到目标 tick 再继续播放”；
 - 之所以敢这么做：8 局全量重放 < 200ms（D3 无 checkpoint）；Index 只用于定位帧边界，**不用于恢复状态**；
 - 预留 `index.checkpoints` 扩展位：若未来单局事件量增长到重放 > 300ms，再按需加入每轮一次的状态快照（格式向后兼容）；
@@ -517,10 +502,10 @@ Trailer
 - 服务端在 `SessionEnd` 时把 panorama 流落盘到 `replays/`（局域网宿主为房主机器，公网为服务器）；
 - **单机同样录制全景流**（本地 Session 直接写盘），保证单机对局也能回放；
 - **保留策略（D8）**：服务器保留**最近 30 局**（可配置），环形淘汰；目录带 `manifest.json`（对局时间、房间、玩家、版本、文件大小），启动时校验并修复；
-- **下载（D8/D14）**：对局结束后 `SessionEnded` 里下发 `replayId + downloadUrl + 一次性 token`；客户端通过 HTTP `GET` 下载（支持 `Range` 续传），落地到本地 `replays/` 后由本地回放器打开；
+- **下载（D8/D14）**：对局结束后 `GameEnded` 里下发 `replayId + downloadUrl + 一次性 token`；客户端通过 HTTP `GET` 下载（支持 `Range` 续传），落地到本地 `replays/` 后由本地回放器打开；
 - 一次性 token 先做简单版：服务端内存表持有（replayId → token、过期时间、已使用标记），默认 **10 分钟有效、下载成功即失效**；不做账号绑定、不做分享链接；
 - 局域网形态：房主进程同时提供这个 HTTP 端点（与房间发现/加入共用端口或独立端口）；
-- 文件命名：`{yyyyMMdd-HHmmss}-{roomId}-{replayId}.mjrp`；文件大小预估：8 局全景流 ≈ 100–300KB（未压缩），Brotli 后 ≈ 30–100KB；
+- 文件命名：`{yyyyMMdd-HHmmss}-{roomId}-{replayId}.mjr`（单机 roomId=local）；文件大小预估：8 局全景流 ≈ 100–300KB（未压缩），Brotli 后 ≈ 30–100KB；
 - 30 局 ≈ 3–10MB（压缩后），磁盘压力可忽略。
 
 ---
@@ -588,7 +573,7 @@ Trailer
 
 **人数与补位（D9）**：固定 4 人局；房主/服务器在开局前用 Bot 补齐空位（单机 = 1 真人 + 3 Bot）。对局中不允许新玩家入座，只允许原座位重连；观战另计（上限 8，D7）。
 
-**房主退出的语义（v1 明确）**：局域网形态下权威 Session 在房主进程内，房主关闭客户端 = 房间结束（客户端收到 `SessionEnded{HostQuit}`）。公网形态下服务器独立，单个玩家退出只是座位离线，对局照常（托管或等待）。这两个行为必须在 UI 上给出明确提示，不能靠玩家猜测。
+**房主退出的语义（v1 明确）**：局域网形态下权威 Session 在房主进程内，房主关闭客户端 = 房间结束（客户端收到 `GameEnded{reason=HostQuit}` 或连接关闭）。公网形态下服务器独立，单个玩家退出只是座位离线，对局照常（托管或等待）。这两个行为必须在 UI 上给出明确提示，不能靠玩家猜测。
 
 **空房销毁（D13）**：公网服务器上，若 **4 个真人全部离线**（无论此刻是否由 Bot 托管），立即结束 Session：断开全部观战者、释放房间码；已开局则把已录到的全景流落盘（标注“未完成”），未开局则直接丢弃。
 
@@ -682,8 +667,9 @@ mahjong/
     DESIGN.md                # 目标设计基线（本文件）
     development.md           # 命令/验证/MCP/团队/提交
     TABLES.md                # 查表格式/来源/生成计划
-    PROTOCOL.md              # 包字段级定义（M2 产出）
-    REPLAY_FORMAT.md         # 回放二进制布局（M1 产出）
+    specs/protocol.md        # 包字段级定义（M2 产出）
+    specs/replay-format.md   # 回放二进制布局（M1 产出）
+    specs/discovery.md       # 局域网发现（M2 产出）
     milestones/  postmortem/  engineering/pitfalls/  reference/  legacy/
   .agents/notes/             # 决策记录（implemented/rejected/...）
   tools/
@@ -712,7 +698,7 @@ mahjong/
 | 金标回放 | 固定一场对局的全景流，回放后终态哈希与预期一致 | xUnit |
 | 断线注入 | 随机断线/重连/重复命令；断言状态一致、无重复动作 | 集成测试 |
 | 多房间隔离 | 同时跑 2 个不同配置房间，交错 tick，断言互不影响 | 集成测试 |
-| 回放导航 | 选轮/快进/快退后状态与目标 tick 的 StateHash 一致 | xUnit |
+| 回放导航 | 选局/快进/快退后状态与目标 tick 的 StateHash 一致 | xUnit |
 | 服务端保留 | 第 31 局写入后最旧一局被淘汰；manifest 自愈 | xUnit |
 | 下载 | HTTP Range 续传、token 过期/越权拒绝/二次下载拒绝（D14） | 集成测试 |
 | 空房销毁 | 4 真人全离线后 Session 立即销毁、回放落盘/丢弃正确、观战被断开（D13） | 集成测试 |
@@ -729,10 +715,10 @@ mahjong/
 | --- | --- | --- |
 | M0.1 | 工程底座与内核骨架：5 工程、CI/doc-gate、内容/查表、牌/区域、tick 引擎、AOT 空客户端（细则见 [M0.1](milestones/M0.1-工程底座与内核骨架.md)） | M0.1 §7 全部满足：构建/测试/门禁、查表与模型、tick 确定性、AOT 空运行、文档 |
 | M0.2 | 单机可玩闭环：规则子集、Bot、本地会话、Godot 最小闭环、AOT 完整对局（细则见 [M0.2](milestones/M0.2-单机可玩闭环.md)） | M0.2 §7 全部满足：8 局单机闭环、确定性、AOT、性能基线、文档 |
-| M1 | 回放与流正式化：SessionStream、全景录制/播放/选轮/倍速、金标回放（[计划](milestones/M1-回放与流正式化.md)，前置 M0.2） | 单机对局产出并播放全景回放；选轮/快进后哈希一致；同局重放 < 200ms |
+| M1 | 回放与流正式化：SessionStream、全景录制/播放/选局/倍速、金标回放（[计划](milestones/M1-回放与流正式化.md)，前置 M0.2） | 单机对局产出并播放全景回放；选局/快进后哈希一致；同局重放 < 200ms |
 | M2 | 局域网：发现、房主内嵌服务器、30s 托管、重连、观战（[计划](milestones/M2-局域网.md)） | 断网 30s 后 Bot 接管、60s 回来立即交还且状态一致；第三人可中途观战；两房间同时在线不串数据 |
 | M3 | 公网：无头服务器、房间码、版本握手、回放下载与保留 30 局（[计划](milestones/M3-公网服务器.md)） | 3 个跨网络客户端打完一场；赛后客户端下载并播放；版本不匹配被正确拒绝 |
-| M4 | 打磨：Bot 优化、回放浏览器、性能/内存、音频/基础美术（[计划](milestones/M4-打磨.md)） | 50 房间压测达标；选轮/拖动 < 300ms；**先测出 Bot 表基线（内存/冷加载/单步决策），再据此定优化目标并复测** |
+| M4 | 打磨：Bot 优化、回放浏览器、性能/内存、音频/基础美术（[计划](milestones/M4-打磨.md)） | 50 房间压测达标；选局/拖动 < 300ms；**先测出 Bot 表基线（内存/冷加载/单步决策），再据此定优化目标并复测** |
 | M5 | 移动端：Android 优先（触摸/DPI/内存/启动时间）；Godot + net10 + AOT 链路验证（[计划](milestones/M5-移动端.md)） | 真机跑完一局 + 播放回放；无桌面专用交互；帧率/内存达标 |
 
 > 本表只保留一行摘要；M0.1/M0.2 的范围、任务、验收与完成定义以各自计划为准。
@@ -814,24 +800,24 @@ D1–D18 已全部拍板。剩下的是“实现后才有数据”或“以后�
 
 ## 附录 C：协议事件类型（v1 初版）
 
+事件字段以 [M0.2 T-5 §1.1](milestones/M0.2/T-5-本地会话.md) 为唯一权威；本表只列可见性。
+
 | 事件 | 可见性 | 说明 |
 | --- | --- | --- |
-| SessionStarted | 公开 | 座位表、设置、庄家/鬼牌 |
-| RoundStarted | 公开 | 局号、庄家、牌墙数量 |
+| RoundStarted | 公开 | 局号、庄家、牌墙/牌尾数量 |
 | TurnStarted | 公开 | 当前座位、deadline tick |
-| Draw | 本人/公开(数量) | 摸牌；本人含 tileId，他人仅数量 |
-| Discard | 公开 | 座位、slot、tileId |
-| RequestOpen | 目标座位 | 请求类型、deadline、允许的 verb |
-| RequestClosed | 目标座位 | 结果（答案/超时/取消） |
-| GroupOpened / GroupResolved | 公开/相关 | 多人竞速 |
+| Drew | 本人/公开(数量) | 摸牌；本人含 tileId，他人仅数量 |
+| Discarded | 公开 | 座位、slot、tileId |
 | Meld | 公开 | 碰/杠类型、牌、来源座位 |
-| Win | 公开 | 赢家、胡牌张、番种、分数变化 |
-| RoundDrawn | 公开 | 流局、亮手 |
-| RoundEnded | 公开 | 分数变化、下一局庄家 |
-| SessionEnded | 公开 | 最终分数、回放标识 |
-| SeatStatus | 公开 | 在线/离线/托管 |
+| RequestOpened | 目标座位 | 请求类型、deadline、allowed verbs |
+| RequestClosed | 目标座位 | 结果（应答/超时/取消） |
+| RoundEnded | 公开 | winnerSeat（-1=流局）、分数变化 |
+| GameEnded | 公开 | 最终分数、名次、回放标识 |
+| SeatStateChanged | 公开 | Online/Grace/Bot/Offline |
 | SyncValue | 按需 | 庄家、鬼牌、其他权威值 |
 | UIState | 单连接 | 追帧开关 |
+
+> **无点炮/荣和**：胡只有自摸（含七对），不进入弃牌响应窗口。
 
 ---
 

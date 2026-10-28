@@ -12,11 +12,13 @@
 | 项 | 要求 |
 |---|---|
 | 系统 | Windows 10/11（M0–M4 只支持 Windows；移动端在 M5） |
-| .NET SDK | **10.0.401**（`global.json` 已锁） |
+| .NET SDK | **10.0.401**；`global.json` 由 M0.1 T-1 创建并锁定 |
 | Godot | **4.7.2 mono/.NET**，本机路径 `D:\Program Files\Godot_v4.7.2-stable_mono_win64\` |
+| AOT 工具链 | MSVC C++ 工作负载 + Windows 10 SDK（`dotnet publish` AOT 前置）；用 `vswhere`/`ls "C:\Program Files (x86)\Windows Kits\10\Include"` 自检 |
 | Git | 能执行 `git config core.hooksPath`（T-2 后需要） |
 | MCP | Godot MCP；C# 符号 MCP（若当前环境提供）。**以实际配置为准，不绑定特定 server 名**；开工先探活，见 [development](development.md) |
 | 内容 | `content/` 已在仓库；查表 6 个 `.bytes` 在 `content/tables/` |
+| Android（M5） | JDK 17、Android SDK 35、NDK 27、adb、Godot Android 导出模板；M5 T-0 探针确认 |
 
 ## 3. 第一次跑起来（M0.1 收口后）
 

@@ -1,6 +1,6 @@
 # Godot 4.7.2 NativeAOT 配方（本机实测）
 
-来源：`E:/learn/Ursa-Client/docs/reference/AOT导出与裁剪取证.md`（2026-09-21 实测）。
+来源：`E:/learn/Ursa-Client/docs/reference/AOT导出与裁剪取证.md`（2026-09-21 在 Ursa-Client 机器实测）。**本仓尚未在本机复现**：本机需 MSVC C++ + Windows 10 SDK；T-6 步骤 0 自检，缺则停。Android 未验证（M5 T-0 探针）。
 用途：M0.1 T-6 的 AOT 冒烟。客户端 AOT、服务器 JIT。
 
 ## 配置
@@ -31,7 +31,7 @@ Remove-Item build/windows -Recurse -Force -ErrorAction Ignore
 & build/windows/Mahjong.exe --smoke
 ````
 
-期望：stdout 含 `CONTENT OK <contentHash>` 与 `M0.1 SMOKE OK`，退出 0，stderr 空。
+期望：stdout 含 `CONTENT OK <contentHash>` 与 `M0.1 SMOKE OK`，退出 0，stderr 空；导出数据目录名为 `data_Mahjong_windows_x86_64/`。
 
 ## 已知坑
 

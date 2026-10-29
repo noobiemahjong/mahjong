@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 引擎无关内核：不引用 Godot/网络/第三方包，依赖方向见 src/AGENTS.md。 -->
+
+</Project>

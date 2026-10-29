@@ -1,0 +1,23 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <!-- Godot.NET.Sdk 以带 Version 的隐式 PackageReference 注入 GodotSharp，与中央包管理冲突 -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Mahjong.Core/Mahjong.Core.csproj" />
+    <ProjectReference Include="../Mahjong.Session/Mahjong.Session.csproj" />
+  </ItemGroup>
+
+  <!-- 被反射/按名加载的程序集：AOT 裁剪时保留元数据与代码 -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Mahjong.Client" />
+    <TrimmerRootAssembly Include="Mahjong.Session" />
+    <TrimmerRootAssembly Include="Mahjong.Core" />
+    <TrimmerRootAssembly Include="GodotSharp" />
+  </ItemGroup>
+
+</Project>

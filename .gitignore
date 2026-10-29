@@ -4,5 +4,8 @@ build/
 replays/
 src/Mahjong.Client/content/
 .reviews/
-*.user
 .reviews2/
+*.user
+.godot/
+*.uid
+src/Mahjong.Client/addons/godot_ai/

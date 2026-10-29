@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mahjong.Session\Mahjong.Session.csproj" />
+    <ProjectReference Include="..\Mahjong.Core\Mahjong.Core.csproj" />
+  </ItemGroup>
+
+</Project>

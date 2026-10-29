@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "limits": [
+    {
+      "path": ".agents/notes/000-template.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": ".agents/notes/AGENTS.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": ".agents/notes/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-28-client-session-dependency.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-28-local-view-vs-mirror.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-28-network-transport.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-joker-rule-as-content.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-28-governance-and-doc-tiers.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-29-cpm-vs-godot-sdk.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-29-doc-gate-and-ci-acceptance.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-29-doc-gate-implementation.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-29-godot-mcp-plugin-not-tracked.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-29-nuget-source-pinning.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "AGENTS.md",
+      "limitBytes": 6144
+    },
+    {
+      "path": "CLAUDE.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/AGENTS.md",
+      "limitBytes": 6144
+    },
+    {
+      "path": "docs/DESIGN.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/TABLES.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/architecture.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/development.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/engineering/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/engineering/pitfalls/000-template.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/engineering/pitfalls/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/handbook.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/legacy/ARCHITECTURE-unity-legacy.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/legacy/README.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/legacy/networking.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/legacy/presentation.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/legacy/rule-engine.md",
+      "limitBytes": 65536
+    },
+    {
+      "path": "docs/milestones/M0.1-工程底座与内核骨架.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M0.1/T-1-工程骨架.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.1/T-2-质量底座.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.1/T-3-内容与查表.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.1/T-4-牌与区域模型.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.1/T-5-tick引擎.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.1/T-6-基线收口.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2-单机可玩闭环.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M0.2/T-1-胡牌与七对.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-2-技能与响应.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-3-计分与轮次.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-4-Bot.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-5-本地会话.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-6-Godot最小闭环.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.2/T-7-收口.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M1-回放与流正式化.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M1-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M2-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M2-局域网.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M3-公网服务器.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M3-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M4-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M4-打磨.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M5-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M5-移动端.md",
+      "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/milestones/TEMPLATE.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/postmortem/000-template.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/postmortem/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/reference/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "docs/reference/game-event-engine.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/reference/godot-aot.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/specs/discovery.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/specs/protocol.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/specs/replay-format.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "src/AGENTS.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "tools/AGENTS.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "tools/doc-gate/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "tools/git-hooks/README.md",
+      "limitBytes": 4096
+    }
+  ]
+}

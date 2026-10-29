@@ -59,7 +59,8 @@
 | `docs/architecture.md` | 8 KB |
 | `docs/DESIGN.md` | 64 KB |
 | `docs/TABLES.md` | 16 KB |
-| `docs/legacy/ARCHITECTURE-unity-legacy.md` | 64 KB |
+| `docs/legacy/**`（历史资料） | 64 KB |
+| 各级 `README.md` / 模板 / `CLAUDE.md` | 4 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
 | 单篇 task（`M<N>/T-*`）/ reference | 10 KB / 8 KB |
 | handbook / specs / 实施规格 | 8 KB / 10 KB / 16 KB |
@@ -67,7 +68,7 @@
 
 超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同提交改预算并说明理由）。
 
-## 门禁（M0.1 交付 `tools/doc-gate`，当前为规范）
+## 门禁（由 [tools/doc-gate](../tools/doc-gate/README.md) 执行）
 
 | 编号 | 规则 |
 |---|---|
@@ -84,7 +85,7 @@
 | G11 | `engineering/pitfalls/` 编号连续，README 不维护区间；000 模板不计，首篇 001 |
 | G12 | 一段一行（soft-wrap；表格/代码/列表除外）；元数据头块/引用/缩进续行豁免 |
 
-门禁未实现前不得作为验收证据（见根 §红线）。
+门禁证据须附命令与退出码（见根 §红线）。
 
 ## 模板
 

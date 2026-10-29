@@ -1,0 +1,90 @@
+#!/bin/sh
+# commit-msg hook: enforce a Conventional Commit subject and a bounded body.
+#
+# Install once per clone:
+#   git config core.hooksPath tools/git-hooks
+#
+# Rules:
+#   subject: ^(feat|fix|docs|refactor|chore|test|perf|build|ci)(\(.+\))?: .{1,50}$
+#   body:    at most 10 non-empty lines (blank lines are not counted)
+#
+# A violation prints the reason on stderr and exits 1; a valid message exits 0.
+# The script is pure ASCII on purpose (doc-gate G9).
+
+LC_ALL=C
+export LC_ALL
+
+msg_file=$1
+
+fail() {
+    printf 'commit-msg: %s\n' "$1" >&2
+    exit 1
+}
+
+if [ -z "$msg_file" ]; then
+    printf 'commit-msg: no commit message file given\n' >&2
+    printf 'commit-msg: usage: commit-msg <path-to-commit-message>\n' >&2
+    exit 1
+fi
+
+if [ ! -e "$msg_file" ]; then
+    fail "commit message file does not exist: $msg_file"
+fi
+
+if [ ! -f "$msg_file" ]; then
+    fail "commit message path is not a regular file: $msg_file"
+fi
+
+if [ ! -r "$msg_file" ]; then
+    fail "commit message file is not readable: $msg_file"
+fi
+
+# Count UTF-8 characters without trusting the locale.  In valid UTF-8 every
+# character is either one ASCII byte (< 0x80) or one leading byte (>= 0xC0);
+# the continuation bytes 0x80-0xBF never start a character.  wc -m cannot be
+# used because a C locale counts bytes, which would reject CJK subjects that
+# are well under 50 characters.
+char_count() {
+    printf '%s' "$1" | od -An -v -tu1 |
+        awk '{ for (i = 1; i <= NF; i++) if ($i < 128 || $i >= 192) n++ } END { print n + 0 }'
+}
+
+subject_re='^(feat|fix|docs|refactor|chore|test|perf|build|ci)(\(.+\))?: '
+
+first_line=$(head -n 1 "$msg_file" | tr -d '\r')
+
+if [ -z "$first_line" ]; then
+    fail "commit message is empty; a subject line is required"
+fi
+
+if ! printf '%s\n' "$first_line" | grep -Eq "$subject_re"; then
+    printf 'commit-msg: subject does not match the required shape.\n' >&2
+    printf 'commit-msg:   expected: type(scope): text\n' >&2
+    printf 'commit-msg:   type:     feat|fix|docs|refactor|chore|test|perf|build|ci\n' >&2
+    printf 'commit-msg:   got:      %s\n' "$first_line" >&2
+    exit 1
+fi
+
+subject=$(printf '%s\n' "$first_line" | sed -E "s/$subject_re//")
+subject_len=$(char_count "$subject")
+
+if [ "$subject_len" -lt 1 ]; then
+    fail "subject text after the type prefix is empty"
+fi
+
+if [ "$subject_len" -gt 50 ]; then
+    printf 'commit-msg: subject text is %s characters; the limit is 50 characters.\n' "$subject_len" >&2
+    printf 'commit-msg: the count is per character, not per byte.\n' >&2
+    exit 1
+fi
+
+body_lines=$(tail -n +2 "$msg_file" | tr -d '\r' | grep -c '[^[:blank:]]')
+body_lines=${body_lines:-0}
+
+if [ "$body_lines" -gt 10 ]; then
+    printf 'commit-msg: body has %s non-empty lines; the limit is 10.\n' "$body_lines" >&2
+    printf 'commit-msg: blank lines are not counted.\n' >&2
+    exit 1
+fi
+
+exit 0

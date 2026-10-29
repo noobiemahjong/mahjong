@@ -4,12 +4,15 @@
 
 ## 命令
 
-当前未开工，以下命令在 M0.1 落地后逐项生效：
+命令按 [M0.1 任务表](milestones/M0.1-工程底座与内核骨架.md) 逐项落地；未落地的命令不作为验收证据。
 
 ```sh
 dotnet build Mahjong.sln              # L1 构建
 dotnet test  Mahjong.sln              # L1 单测
 pwsh -File tools/doc-gate/doc-gate.ps1 -Fail   # L2 文档门禁
+pwsh -File tools/doc-gate/tests/run.ps1        # L2 门禁夹具自检
+pwsh -File tools/git-hooks/tests/run.ps1       # L2 commit-msg 钩子测试
+git config core.hooksPath tools/git-hooks      # 每克隆安装一次
 pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里程碑收口）
 ```
 

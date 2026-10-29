@@ -2,11 +2,12 @@
 
 适用 `tools/**`。全仓常驻规矩见根 [AGENTS.md](../AGENTS.md)。
 
-## 工具清单（随实现补充）
+## 工具清单
 
 | 工具 | 用途 |
 |---|---|
 | `doc-gate` | 文档门禁：链接/BOM/LF/表结构/预算/Note 路径/编号 |
+| `git-hooks` | `commit-msg` 钩子：Conventional Commit 标题与正文长度 |
 | `table-inspect` | 解码 `content/tables/*.bytes` 为 JSONL（只读） |
 | `aot-smoke` | 客户端 AOT 导出 + 独立 exe 冒烟 |
 
@@ -18,5 +19,5 @@
 - **门禁确定性**：同一输入同一退出码；规则变更必须同步 [docs/AGENTS.md](../docs/AGENTS.md) 的门禁表。
 - **不碰外部资产**：旧 Unity 项目、Ursa 两仓、SGS 只读；修改需明确授权。
 - **MCP 写操作**（场景/资产/导入）必须属于已确认任务；工具不得隐式触发。
-- 工具目录：`tools/doc-gate/`、`tools/aot-smoke/`、`tools/build-android/`、`tools/benchmarks/`；每个工具有 `README.md` 与可复制命令。
+- 工具目录：`tools/doc-gate/`、`tools/git-hooks/`、`tools/aot-smoke/`、`tools/build-android/`、`tools/benchmarks/`；每个工具有 `README.md` 与可复制命令。
 - 工具自身的行为变化（参数、输出格式、退出码）按非平凡改动处理：写 Agent Note 并更新使用文档。

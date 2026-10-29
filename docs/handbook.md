@@ -15,7 +15,7 @@
 | .NET SDK | **10.0.401**；`global.json` 由 M0.1 T-1 创建并锁定 |
 | Godot | **4.7.2 mono/.NET**，本机路径 `D:\Program Files\Godot_v4.7.2-stable_mono_win64\` |
 | AOT 工具链 | MSVC C++ 工作负载 + Windows 10 SDK（`dotnet publish` AOT 前置）；用 `vswhere`/`ls "C:\Program Files (x86)\Windows Kits\10\Include"` 自检 |
-| Git | 能执行 `git config core.hooksPath`（T-2 后需要） |
+| Git | 能执行 `git config core.hooksPath tools/git-hooks`（安装提交钩子） |
 | MCP | Godot MCP；C# 符号 MCP（若当前环境提供）。**以实际配置为准，不绑定特定 server 名**；开工先探活，见 [development](development.md) |
 | 内容 | `content/` 已在仓库；查表 6 个 `.bytes` 在 `content/tables/` |
 | Android（M5） | JDK 17、Android SDK 35、NDK 27、adb、Godot Android 导出模板；M5 T-0 探针确认 |
@@ -28,11 +28,12 @@ cd mahjong
 dotnet build Mahjong.sln -warnaserror
 dotnet test  Mahjong.sln
 pwsh -File tools/doc-gate/doc-gate.ps1 -Fail
+pwsh -File tools/git-hooks/tests/run.ps1     # 钩子自检
 # 运行客户端：用 Godot 打开 src/Mahjong.Client，运行 Startup.tscn
 # AOT 冒烟：pwsh -File tools/aot-smoke/aot-smoke.ps1
 ````
 
-M0.1 未收口前，命令会逐步出现；以 [M0.1 计划](milestones/M0.1-工程底座与内核骨架.md) 的 T-1/T-2/T-6 为准。
+命令按 [M0.1 计划](milestones/M0.1-工程底座与内核骨架.md) 任务表逐项落地；未落地的命令不作为验收证据。
 
 ## 4. 读文档顺序
 

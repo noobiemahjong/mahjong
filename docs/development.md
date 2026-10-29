@@ -43,7 +43,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里�
 | 仓库内数据 | 查表、回放、内容 | — | 用 `tools/table-inspect` 或 python/msgpack 实读 |
 
 - **不绑定具体 MCP server 名**：其他项目的专用 MCP server 不属于本项目；以当前环境实际配置为准，开工先列可用 server 再选。
-- 外部仓库（旧 Unity、SGS、Ursa 两仓）与 `docs/**` 不在 C# 索引内，用文件读取/搜索是正解，不算回退。
+- 外部仓库（旧 Unity、`E:/learn` 下的参考仓）与 `docs/**` 不在 C# 索引内，用文件读取/搜索是正解，不算回退。
 - MCP 快照是「取用那一刻」的视图；跨轮复用旧读数前重新取。
 - MCP 写操作（改场景、改资产、导入）必须属于已确认任务；顺手改 = 违规。
 

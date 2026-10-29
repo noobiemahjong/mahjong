@@ -2,7 +2,7 @@
 
 > 状态：**v1.1 基线**（D1–D19 已拍板，2026-10-29）
 > 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT） → v1.1 增加 D19 鬼牌规则数据化
-> 目标引擎：Godot 4.7.2（mono / .NET 10，与 Ursa-Client 同形态：net10.0 + NativeAOT）
+> 目标引擎：Godot 4.7.2（mono / .NET 10，net10.0 + NativeAOT）
 > 前置阅读：旧项目资料（`legacy/ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
 > 治理：根 [AGENTS.md](../AGENTS.md) · 文档标准 [docs/AGENTS.md](AGENTS.md) · 当前实现 [architecture.md](architecture.md) · 决策 [.agents/notes/](../.agents/notes/README.md)
 > 本文档只写设计，不含实现代码。
@@ -139,7 +139,7 @@ D1–D19 的推论：
 | Mahjong.Server | net10.0（普通 JIT 发布） | 无头宿主：房间、传输、发现、HTTP（房间码/回放下载） | Session |
 | Mahjong.Tests | net10.0 | xUnit：规则/流程/金标回放/断线/多房间隔离/AOT 冒烟 | Core / Session |
 
-> **目标框架统一 net10.0**。依据：Ursa-Client 实测 Godot 4.7.2 宿主运行时为 .NET 10.0.9，`TargetFramework=net10.0`、`PublishAot` 导出可跑通（其 `docs/reference/AOT导出与裁剪取证.md`）。本机已有 .NET SDK 10.0.401，**不需要 .NET 8**。
+> **目标框架统一 net10.0**。依据：Godot 4.7.2 宿主运行时为 .NET 10.0.9，`TargetFramework=net10.0`、`PublishAot` 导出可跑通（Windows 实测，见 [godot-aot](reference/godot-aot.md)）。本机已有 .NET SDK 10.0.401，**不需要 .NET 8**。
 >
 > 只拆 5 个工程：Core 是引擎无关内核；Client → Session → Core；Server → Session → Core。**AOT 需要 root 的程序集越少越好**（见 §3.4）。未来若 Core 过大，再按 Rules/Flow/Protocol 拆分并同步补 root。
 
@@ -156,7 +156,7 @@ D1–D19 的推论：
 **适用范围**：`Mahjong.Client`（Godot）使用 NativeAOT；`Mahjong.Server` 用普通 `dotnet publish`（JIT/自包含或框架依赖），不走裁剪。
 但 `Mahjong.Core` 被客户端引用，**Core 必须始终 AOT 安全**；只有 Server 独占的代码（`Mahjong.Session`、传输、HTTP）可以放松约束。
 
-客户端采用 Ursa-Client 已实测通过的配方（其 `src/Ursa-Client/Ursa-Client.csproj`）：
+客户端采用已实测通过的配方（见 [godot-aot](reference/godot-aot.md)）：
 
 ```xml
 <PropertyGroup>
@@ -171,7 +171,7 @@ D1–D19 的推论：
 ```
 
 - Godot 4.7.2 的导出预设**没有** AOT 开关，只能写在 csproj；编辑器跑的是 Debug/JIT，开发体验不变。
-- Godot 按名字从 .pck 动态加载脚本类型 ⇒ 宿主程序集必须**整程序集 root**；只 root 游戏程序集时，`ScriptPathAttribute` 等特性的构造参数会被裁空，引擎报 `native_name == StringName()`（Ursa 已实测定位）。
+- Godot 按名字从 .pck 动态加载脚本类型 ⇒ 宿主程序集必须**整程序集 root**；只 root 游戏程序集时，`ScriptPathAttribute` 等特性的构造参数会被裁空，引擎报 `native_name == StringName()`（已实测定位）。
 - 任何**新增的、会被按名字或反射加载的程序集**都必须补进 `TrimmerRootAssembly`，并重跑 AOT 冒烟。
 
 **硬性约束（违反会在“导出后运行到某个功能”才炸）：**
@@ -461,7 +461,7 @@ UIState(detached)
 - **布局**：全部 Control 用锚点/容器，不写死像素；至少覆盖 16:9 与 20:9 两种安全区；牌桌用“相对座位”布局（旧项目已有 `GetRelativeSeatIndex` 的思路）。
 - **交互**：单击选中 / 再点提交；hover 只作为增强，不作为唯一手段（旧项目的“甩牌”手势保留为可选加速）。
 - **输入抽象**：ViewModel 不假设鼠标，统一成 “pointer down/move/up + 手势识别”，桌面与触摸共用一套。
-- **性能预算**：目标中端 Android 60fps；牌面走图集，单帧纹理切换数在 M1 前定预算（参考 Ursa 的“一屏指令涉及的纹理数”教训）。
+- **性能预算**：目标中端 Android 60fps；牌面走图集，单帧纹理切换数在 M1 前定预算（按“一屏指令涉及的纹理数”先算再定）。
 - **内存**：Bot 表常驻内存需实测；大表按需/分块加载。
 - **构建**：Android 导出 + AOT 链路作为 M5 验证，v1 不阻塞；iOS 更晚。
 
@@ -736,7 +736,7 @@ mahjong/
 | 风险 | 影响 | 缓解 |
 | --- | --- | --- |
 | AOT 裁剪导致运行期缺类型 | “编译过、跑到某功能才炸” | 工程第一天就跑 aot-smoke；按名字/反射加载的程序集一律 root；新依赖必重跑 |
-| Godot AOT 导出链路（跨平台） | 导出产物不可运行 | 先 Windows 打通（Ursa 已实测）；Linux/macOS 导出单独验证 |
+| Godot AOT 导出链路（跨平台） | 导出产物不可运行 | 先 Windows 打通（Windows 实测）；Linux/macOS 导出单独验证 |
 | 10Hz 计时精度 | 倒计时显示跳动 100ms | 表现层插值显示；逻辑只认 tick |
 | 镜像与权威流程漂移 | 静默状态不一致 | StateHash 对账 + 金标回放 + 单测 |
 | UI 重做工作量被低估 | 进度风险 | M0.2 先做“能玩”的最小 UI，美术后置 |

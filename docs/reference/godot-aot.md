@@ -1,8 +1,8 @@
-# Godot 4.7.2 NativeAOT 配方（Ursa-Client Windows 实测）
+# Godot 4.7.2 NativeAOT 配方（Windows 实测）
 
-来源：`E:/learn/Ursa-Client/docs/reference/AOT导出与裁剪取证.md`（2026-09-21 **Windows AOT 真实跑过**）。本仓尚未在本机复现；T-6 步骤 0 自检 MSVC/Windows SDK，缺则停。
+来源：2026-09-21 的 **Windows AOT 真实跑过**记录（原始取证不在本仓；配方与坑已内联，可独立复现）。本仓尚未在本机复现；T-6 步骤 0 自检 MSVC/Windows SDK，缺则停。
 
-Android：Ursa-Client 的 `E:/learn/Ursa-Client/docs/reference/Android下AOT支持取证.md` 明确写“没有任何一条来自本机 Android 实测”（当时无 Android SDK/NDK），只做了源码层面确认；本机现在也没装 NDK。因此 M5 T-0 是**本机 Android 工具链实测**，不是重复验证 Ursa 的 Windows 结论。
+Android：Godot 4.7.2 的 Android AOT 分支只在源码层面确认存在，没有本机 Android 实测（当时无 Android SDK/NDK）；本机现在也没装 NDK。因此 M5 T-0 是**本机 Android 工具链实测**，不是重复验证 Windows 结论。
 用途：M0.1 T-6 的 AOT 冒烟。客户端 AOT、服务器 JIT。
 
 ## 配置
@@ -34,7 +34,7 @@ Remove-Item build/windows -Recurse -Force -ErrorAction Ignore
 & build/windows/Mahjong.exe --smoke
 ````
 
-期望：stdout 含 `CONTENT OK <contentHash>` 与 `M0.1 SMOKE OK`，退出 0，stderr 空；导出数据目录名为 `data_Mahjong_windows_x86_64/`。Windows 路径有 Ursa-Client 实测先例；本机仍以 T-6 步骤 0 自检为准。
+期望：stdout 含 `CONTENT OK <contentHash>` 与 `M0.1 SMOKE OK`，退出 0，stderr 空；导出数据目录名为 `data_Mahjong_windows_x86_64/`。Windows 路径有实测先例；本机仍以 T-6 步骤 0 自检为准。
 
 ## 已知坑
 

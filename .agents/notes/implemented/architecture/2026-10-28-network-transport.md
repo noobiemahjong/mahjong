@@ -17,7 +17,7 @@ Godot `StreamPeerTCP`、Godot 高层 MultiplayerAPI、WebSocket、LiteNetLib、�
 4. **LAN 发现用 UDP**（`UdpClient` 广播/单播），只做发现，不承载对局数据。
 5. HTTP 只在 M3 用（ASP.NET Core/Kestrel，服务端 JIT）；v1 不做 TLS。
 6. 传输抽象为 `ITransport`/`IConnection` 接缝；未来要 WebSocket 或 LiteNetLib，只换实现，不改协议与上层。
-7. 不引入第三方网络库（LiteNetLib/ENet/Photon 等）；不把 Ursa/SGS 的传输实现搬进来。
+7. 不引入第三方网络库（LiteNetLib/ENet/Photon 等）；不把外部项目的传输实现搬进来。
 
 ## Alternatives considered
 

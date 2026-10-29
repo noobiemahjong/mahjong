@@ -1,10 +1,10 @@
-# Agent Note: 文档治理采用 DSH 三块分工，裁剪 Ursa 的机制
+# Agent Note: 文档治理采用 DSH 三块分工，裁剪重型治理方案
 
 Status: implemented
 
 ## Problem
 
-vibe coding 项目的维护性取决于「下一个 agent 能否不猜」。参考的 Ursa-Server / Ursa-Client 两仓治理已跑通，但体量（49 篇 ADR、全量门禁、census）对麻将项目过重；DeepSeek Harness 的公开文档体系给出了更轻的三块分工：根 AGENTS 管常驻规矩、docs 管当前事实、notes 管决策因果。
+vibe coding 项目的维护性取决于「下一个 agent 能否不猜」。既有的一套重型治理（49 篇 ADR、19 条纪律、全量门禁、census）已验证可行，但体量对麻将项目过重；DeepSeek Harness 的公开文档体系给出了更轻的三块分工：根 AGENTS 管常驻规矩、docs 管当前事实、notes 管决策因果。
 
 同时必须避免两件事：把治理做成文档 KPI；把实现绑死在旧 Unity 版本上。
 
@@ -21,7 +21,7 @@ vibe coding 项目的维护性取决于「下一个 agent 能否不猜」。参�
 
 ## Alternatives considered
 
-- **完整复制 Ursa-Server 治理**：49 篇 ADR、19 条纪律、全量门禁；治理成本会压过开发。团队 >3 人且里程碑并行 >4 时再评估。
+- **完整复制重型治理**：49 篇 ADR、19 条纪律、全量门禁；治理成本会压过开发。团队 >3 人且里程碑并行 >4 时再评估。
 - **不做治理，只写 DESIGN**：决策失忆、重复踩坑、协议契约漂移；不重开。
 - **把所有规则塞进根 AGENTS.md**：单文件膨胀、子树无法按需加载；不重开，按子树拆分。
 - **继续用 ADR + 总索引**：与 notes 的路径编码/无索引冲突，且索引在多 agent 并行时冲突；改为 Note 后不再维护索引。

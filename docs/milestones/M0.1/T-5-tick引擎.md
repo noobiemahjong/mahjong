@@ -178,4 +178,25 @@ u16 roundNo
 
 ## 实施记录
 
-开工后在此追加：日期、实际改动、验证命令与结果、偏差/后续。
+日期：2026-10-29
+
+实际改动：
+- 代码：`Mahjong.Core.Flow` 新增 §1/§1.1/§3 类型 8 文件；`GameAction` 构造 internal，`Id` 由实例递增。
+- 行为：`Step` 写 `Tick`、`BeginTick` 后按 §2 循环；子动作 Priority 降序/CreationOrder 升序、跳过已完成；abort/Complete 清子树、各 Dispose 一次。
+- 测试：`Mahjong.Tests.Flow` 94 例覆盖七态/顺序/中断/上限/交错隔离/金标/oracle；静态守卫新增 1 例（`Mahjong.Session`）。
+- 文档：任务表、M0.1 结果、[3 篇 Note](../../../.agents/notes/implemented/architecture/)。
+
+验证（exit 0）：
+- `dotnet build Mahjong.sln -warnaserror`：0 警告 0 错误。
+- `dotnet test Mahjong.sln -v q`：435 通过、0 失败。
+- `dotnet test Mahjong.sln --filter Category=Benchmark -l "console;verbosity=detailed"`：37.78/34.15/34.59 ns/step，中位 34.59。
+- `pwsh -File tools/doc-gate/doc-gate.ps1 -Fail`：80 files、0 errors、24 warnings。
+
+偏差：
+- 裁定：`DrainForTick` 在 (ReceivedTick, Seq) 后加入队序第三键。
+- 裁定：`maxStepsPerTick` 只计 `MoveNext`，第 N+1 次前抛；`WaitTicks(0)` 先返回。
+- 裁定：`AbortSiblings` 移出兄弟；根自然结束不写 `Result`。
+- `StateHash` `i32 score` 由 `short Score` 提升。
+
+后续与现状：
+- 命令排空用插入排序；Benchmark 无耗时断言；`RequestGroup` 做快照、`Trigger` 占位，开窗/派发归 M0.2。

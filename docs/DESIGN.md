@@ -1,7 +1,7 @@
 # 麻将（Godot 重写）设计稿
 
-> 状态：**v1.0 基线**（D1–D18 已拍板，2026-10-28）
-> 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT）
+> 状态：**v1.1 基线**（D1–D19 已拍板，2026-10-29）
+> 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT） → v1.1 增加 D19 鬼牌规则数据化
 > 目标引擎：Godot 4.7.2（mono / .NET 10，与 Ursa-Client 同形态：net10.0 + NativeAOT）
 > 前置阅读：旧项目资料（`legacy/ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
 > 治理：根 [AGENTS.md](../AGENTS.md) · 文档标准 [docs/AGENTS.md](AGENTS.md) · 当前实现 [architecture.md](architecture.md) · 决策 [.agents/notes/](../.agents/notes/README.md)
@@ -35,10 +35,11 @@
 | D16 | 排障日志 | 不额外落“对局日志”，**回放文件即排障材料** | 服务端 |
 | D17 | Bot 基准 | 实现后实测基线，**M4 再定优化目标**（现在不拍数字） | 内容/算法 |
 | D18 | 移动端 | **完整实现之后再做**（旧项目本来就是移动端为主），但 v1 约束就要提前遵守 | 表现层/构建 |
+| D19 | 鬼牌 | 由 `content/rules.json` 指定（None/FixedType/FlipIndicator，v1 默认 FixedType=红中） | 规则/内容 |
 
 > 本表只保留结论；每条决策的 why、放弃的方案与后果见 [.agents/notes/](../.agents/notes/README.md)。
 
-D1–D18 的推论：
+D1–D19 的推论：
 
 - D1 决定了**权威端需要录制一份不受座位过滤的事件流**；它只在服务端存在，赛后落盘，绝不下发给在线客户端。
 - D2 决定了**观战连接使用与玩家相同的流格式**，只是“可见性策略”不同，不需要单独的协议分支。
@@ -49,6 +50,7 @@ D1–D18 的推论：
 - D12 决定了共享内核（Core）必须 AOT/裁剪安全；服务器自身代码可以放松（JIT 发布）。
 - D13 决定了“房间”的寿命与真人数量绑定：真人全走 ⇒ 房间连同观战者一起销毁。
 - D18 决定了 v1 的 UI/输入/内存策略必须按移动端能接受的标准来做，不能先写一套桌面专用交互。
+- D19 决定了鬼牌类型来自内容配置而非代码，contentHash 覆盖规则文件；换鬼牌规则等于换内容版本。
 
 ---
 
@@ -204,6 +206,8 @@ D1–D18 的推论：
 - **显示序（view order）**：UI 对手牌排序后的顺序，只存在于 ViewModel。
 - 任何从 UI 发起的操作，必须先把显示序换算成流程序（按 Slot 引用）再发命令。
 - 禁止在规则/协议层对 Zone 内元素排序。
+
+鬼牌由 `content/rules.json` 指定；当前鬼牌不进 rank 计数、只作万能牌（不可打出、不可作碰杠材料、不可当普通箭牌）。
 
 ### 4.2 可见性
 
@@ -616,6 +620,7 @@ content/
   tiles.json             # 34 种牌定义、精灵索引、语音索引
   suits.json             # 花色规则（是否顺子、每种张数）
   skills.json            # 4 个技能的元数据（id、动画资源、语音）
+  rules.json             # 规则配置（鬼牌模式）
   scoring.json           # 番种、分值（v1 可先硬编码，后续配置化）
   tables/                # 旧项目原样迁移的 6 个查表（v1 唯一事实来源）
     dictionary_normal.bytes      # 胡牌表（万/筒/条）
@@ -628,7 +633,7 @@ content/
 
 > 表的二进制格式、key 编码、与上游算法仓库的差异、以及「生成器丢失」后的处理方案，见 [TABLES.md](TABLES.md)。
 
-- contentHash = 上述文件的 sha256 清单哈希，握手与回放都校验；
+- contentHash = manifest 列出的全部文件（tiles/suits/skills/rules 4 JSON + 6 bytes）的 sha256 清单哈希，握手与回放都校验；
 - 旧项目的 ScriptableObject 数据导出为 JSON；查表二进制**先沿用旧格式**（D10），加载后转为更紧凑的结构（排序数组 + 二分）以降低内存；
 - 服务端与客户端加载同一份 content 目录（构建时复制）；
 - **AOT 约束**：JSON 读取用 source-generated `JsonSerializerContext`；`*.bin` 查表若继续用 MessagePack，必须静态注册 MPC 生成的 Formatter（禁用动态 resolver），否则导出后裁剪会留下空实现（§3.4）。

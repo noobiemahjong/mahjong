@@ -63,6 +63,8 @@ key = (((count[0] * 10 + count[1]) * 10 + count[2]) ... )
 
 例：key `1210220` → `[[2,true,false,[0,1,1,1,1,1,1,1,1]],[3,false,false,[0,1,1,1,1,1,1,1,1]],[3,true,true,[]],[4,false,true,[]]]`。这是 4 种分解：前两行是“未成胡、需补某张万子”，后两行是“直接成胡”。（2026-10-28 对 `.bytes` 实读；旧文档曾误写成单行 `[4,...]`。）
 
+> 本表按全 rank 空间生成：当「中」被配置为鬼牌时，`dictionary_dragon` 的 rank1（中）计数恒为 0，64 个 key 中 48 个含中≠0 的 key 在该配置下不可达；鬼牌配置为 None 或其他牌时这些 key 可达。表数据不随鬼牌配置改变，配置见 `content/rules.json`。
+
 ### 2.3 牌效表行（ai_dictionary_*）
 
 ```
@@ -71,6 +73,22 @@ key = (((count[0] * 10 + count[1]) * 10 + count[2]) ... )
 
 - 同一牌型多种分解，每行一个 `[是否含将, 该分解的胡牌概率]`；
 - 旧 `BotDecisionMaker.Calculate` 取“各分解概率之和的最大值”，并强制“有且只有一对将”。
+
+### 2.4 金标 fixture（7 条）
+
+M0.1 T-3 的断言基线（`src/Mahjong.Tests/fixtures/tables.json` 与之逐字节一致）：
+
+| 表 | key | 期望行 |
+|---|---|---|
+| `dictionary_normal` | 1210220 | `[(2,true,false,[0,1,1,1,1,1,1,1,1]),(3,false,false,[0,1,1,1,1,1,1,1,1]),(3,true,true,[]),(4,false,true,[])]` |
+| `dictionary_normal` | 101210221 | `[(3,true,false,[1,1,1,1,1,1,1,1,1]),(4,true,true,[])]` |
+| `dictionary_wind` | 2 | `[(0,true,true,[]),(0,false,false,[0,0,0,1]),(1,false,true,[]),(2,true,false,[1,1,1,1]),(3,true,true,[]),(3,false,false,[1,1,1,1]),(4,false,true,[])]` |
+| `dictionary_dragon` | 1 | `[(0,true,false,[0,0,1]),(1,true,true,[]),(1,false,false,[0,0,1]),(2,false,true,[]),(3,true,false,[1,1,1]),(4,true,true,[]),(4,false,false,[1,1,1])]` |
+| `ai_dictionary_normal` | 0 | `[(true,0.006089478044739022),(false,1.0016042780748664)]` |
+| `ai_dictionary_wind` | 0 | `[(true,0.014027149321266967),(false,1.0058823529411764)]` |
+| `ai_dictionary_dragon` | 0 | `[(true,0.0196078431372549),(false,1.0088235294117647)]` |
+
+（2026-10-28 对 `.bytes` 实读；改表或改 fixture 必须逐条对照，见 §4.2。）
 
 ---
 

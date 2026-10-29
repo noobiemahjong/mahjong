@@ -57,6 +57,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里�
 - 一个任务一个 Conventional Commit（`feat` / `fix` / `docs` / `refactor` / `chore` / `test`）；标题 ≤50 字。
 - body ≤10 个非空行：改了什么 / 为什么 / 验收口径（只写跑过的命令）。
 - **不 push**；提交留在本地。
+- 本地 `build` / `test` / `doc-gate` 全绿即满足里程碑收口判据；CI 首绿由用户 push 后回填，回填前记「CI 待远程确认」。
 - 收尾汇报：做了什么、怎么验的、剩余风险；等确认再做下一件。
 
 ## 需要先征得同意

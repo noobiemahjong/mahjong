@@ -61,7 +61,7 @@
 | `docs/TABLES.md` | 16 KB |
 | `docs/legacy/ARCHITECTURE-unity-legacy.md` | 64 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
-| 单篇 task（`M<N>/T-*`）/ reference | 8 KB / 8 KB |
+| 单篇 task（`M<N>/T-*`）/ reference | 10 KB / 8 KB |
 | handbook / specs / 实施规格 | 8 KB / 10 KB / 16 KB |
 | 索引行（milestones 等） | ≤300 字符 |
 
@@ -76,13 +76,13 @@
 | G3 | 仅 LF |
 | G4 | 表结构：单元格数 = 表头；无未转义双竖线 |
 | G5 | 单行 ≤5000 字符 |
-| G6 | 索引行 ≤300 字符 |
-| G7 | 每篇 ≤ 预算 |
-| G8 | 预算棘轮：上限只降不升；上调须同提交改基线并说明 |
+| G6 | 索引行 ≤300 字符（仅 `docs/milestones/README.md`） |
+| G7 | 每篇 ≤ 预算；精确路径登记，未登记只警告 |
+| G8 | json ≤ baseline；上调=同提交改基线 + Note（评审项） |
 | G9 | 脚本/钩子纯 ASCII |
-| G10 | Note：文件名 `yyyy-mm-dd-slug.md`；lifecycle/class 在闭集内；`Status:` 与所在文件夹一致；禁止 `INDEX.md` |
-| G11 | `engineering/pitfalls/` 编号连续，README 不维护区间 |
-| G12 | 一段一行（soft-wrap；表格/代码/列表除外） |
+| G10 | Note：文件名 `yyyy-mm-dd-slug.md`；lifecycle/class 在闭集内；`Status:` 与所在文件夹一致；禁止 `INDEX.md`；README/AGENTS/模板豁免 |
+| G11 | `engineering/pitfalls/` 编号连续，README 不维护区间；000 模板不计，首篇 001 |
+| G12 | 一段一行（soft-wrap；表格/代码/列表除外）；元数据头块/引用/缩进续行豁免 |
 
 门禁未实现前不得作为验收证据（见根 §红线）。
 

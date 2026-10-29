@@ -4,7 +4,9 @@
 .agents/notes/implemented/architecture/2026-10-28-client-session-dependency.md	8192
 .agents/notes/implemented/architecture/2026-10-28-local-view-vs-mirror.md	8192
 .agents/notes/implemented/architecture/2026-10-28-network-transport.md	8192
+.agents/notes/implemented/architecture/2026-10-29-content-manifest-and-hash.md	8192
 .agents/notes/implemented/architecture/2026-10-29-joker-rule-as-content.md	8192
+.agents/notes/implemented/architecture/2026-10-29-msgpack-lite-table-codec.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md	8192
 .agents/notes/implemented/process/2026-10-28-governance-and-doc-tiers.md	8192

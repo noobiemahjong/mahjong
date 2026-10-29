@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "skills": [
+    { "id": 1, "name": "Pong" },
+    { "id": 2, "name": "Kong" },
+    { "id": 3, "name": "SelfDrawn" },
+    { "id": 4, "name": "SelfDrawnWith7Pairs" }
+  ]
+}

@@ -26,7 +26,15 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-content-manifest-and-hash.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/architecture/2026-10-29-joker-rule-as-content.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-msgpack-lite-table-codec.md",
       "limitBytes": 8192
     },
     {

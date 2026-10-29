@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "suits": [
+    { "suit": "Character", "rankCount": 9, "amountOfEachRank": 4, "allowedSequence": true },
+    { "suit": "Dot", "rankCount": 9, "amountOfEachRank": 4, "allowedSequence": true },
+    { "suit": "Bamboo", "rankCount": 9, "amountOfEachRank": 4, "allowedSequence": true },
+    { "suit": "Wind", "rankCount": 4, "amountOfEachRank": 4, "allowedSequence": false },
+    { "suit": "Dragon", "rankCount": 3, "amountOfEachRank": 4, "allowedSequence": false }
+  ]
+}

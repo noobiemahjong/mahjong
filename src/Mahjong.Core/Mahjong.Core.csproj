@@ -2,4 +2,13 @@
 
   <!-- 引擎无关内核：不引用 Godot/网络/第三方包，依赖方向见 src/AGENTS.md。 -->
 
+  <PropertyGroup>
+    <!-- 内容 JSON 只走源生成上下文，查表只读字节；开启裁剪/AOT 分析器，让非 AOT 安全的写法在构建期变红。 -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mahjong.Tests" />
+  </ItemGroup>
+
 </Project>

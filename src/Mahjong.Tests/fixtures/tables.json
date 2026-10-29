@@ -1,0 +1,269 @@
+{
+  "version": 1,
+  "winAssertions": [
+    {
+      "table": "dictionary_normal",
+      "suit": "Character",
+      "key": 1210220,
+      "rows": [
+        [
+          2,
+          true,
+          false,
+          [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          3,
+          false,
+          false,
+          [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          3,
+          true,
+          true,
+          []
+        ],
+        [
+          4,
+          false,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "table": "dictionary_normal",
+      "suit": "Character",
+      "key": 101210221,
+      "rows": [
+        [
+          3,
+          true,
+          false,
+          [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          4,
+          true,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "table": "dictionary_wind",
+      "suit": "Wind",
+      "key": 2,
+      "rows": [
+        [
+          0,
+          true,
+          true,
+          []
+        ],
+        [
+          0,
+          false,
+          false,
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        [
+          1,
+          false,
+          true,
+          []
+        ],
+        [
+          2,
+          true,
+          false,
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          3,
+          true,
+          true,
+          []
+        ],
+        [
+          3,
+          false,
+          false,
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          4,
+          false,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "table": "dictionary_dragon",
+      "suit": "Dragon",
+      "key": 1,
+      "rows": [
+        [
+          0,
+          true,
+          false,
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        [
+          1,
+          true,
+          true,
+          []
+        ],
+        [
+          1,
+          false,
+          false,
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        [
+          2,
+          false,
+          true,
+          []
+        ],
+        [
+          3,
+          true,
+          false,
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        [
+          4,
+          true,
+          true,
+          []
+        ],
+        [
+          4,
+          false,
+          false,
+          [
+            1,
+            1,
+            1
+          ]
+        ]
+      ]
+    }
+  ],
+  "aiAssertions": [
+    {
+      "table": "ai_dictionary_normal",
+      "suit": "Character",
+      "key": 0,
+      "rows": [
+        [
+          true,
+          0.006089478044739022
+        ],
+        [
+          false,
+          1.0016042780748664
+        ]
+      ]
+    },
+    {
+      "table": "ai_dictionary_wind",
+      "suit": "Wind",
+      "key": 0,
+      "rows": [
+        [
+          true,
+          0.014027149321266967
+        ],
+        [
+          false,
+          1.0058823529411764
+        ]
+      ]
+    },
+    {
+      "table": "ai_dictionary_dragon",
+      "suit": "Dragon",
+      "key": 0,
+      "rows": [
+        [
+          true,
+          0.0196078431372549
+        ],
+        [
+          false,
+          1.0088235294117647
+        ]
+      ]
+    }
+  ],
+  "keyCounts": {
+    "dictionary_normal": 227494,
+    "dictionary_wind": 251,
+    "dictionary_dragon": 64,
+    "ai_dictionary_normal": 286550,
+    "ai_dictionary_wind": 610,
+    "ai_dictionary_dragon": 125
+  }
+}

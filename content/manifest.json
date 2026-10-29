@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "files": {
+    "rules.json": "fd7b1132cccc104e70b8bffa724ba3d2df1637f51521f652fb5ea74c827242f4",
+    "skills.json": "c453d13f1d96ef2a45c36a03934d2e210bddd511c6ff6a7752bec80383a00dfd",
+    "suits.json": "2ddc0c6f49bc5a05b26c4b5d974ffd76b73be7c862250be0a02b83adbc7aa3f6",
+    "tables/ai_dictionary_dragon.bytes": "95c578a9c82c6e41e1ba6348e27bbff717543242a205ef53579576fb31533bf2",
+    "tables/ai_dictionary_normal.bytes": "b1280e179bfae4e305e4850bc1fea0862178da0648fcd07a4ddf111890f168df",
+    "tables/ai_dictionary_wind.bytes": "c4ba5b5982a2e84f7d3b1d5dc8e51b44b1d635b8742311b09878936e74366c11",
+    "tables/dictionary_dragon.bytes": "b4448d4a4826682c05ed456d057c69f06f4bf7ae3759185452543152cc43a861",
+    "tables/dictionary_normal.bytes": "263213353b78f663a49bc4668459cbb2d28278553f41f414326e03796f876bce",
+    "tables/dictionary_wind.bytes": "5605d9a6b445461f7db5fcb91418860d1021fd47c4c45b133dee995be55a355f",
+    "tiles.json": "761ba8dae7c4d0a3db1123d7835bd22a04ab0f72e19d3522c4b0ae2292f5d47c"
+  },
+  "contentHash": "1fc2b54616c4b1e722f794b7e4a4bcb9b5cd3dc6891431a83777da071e2b27cc"
+}

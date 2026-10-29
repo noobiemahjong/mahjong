@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="fixtures\tables.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Mahjong.Core\Mahjong.Core.csproj" />
     <ProjectReference Include="..\Mahjong.Session\Mahjong.Session.csproj" />
   </ItemGroup>

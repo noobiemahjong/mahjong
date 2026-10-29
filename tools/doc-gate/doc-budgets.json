@@ -30,11 +30,23 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-deterministic-deal-and-pcg32.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/architecture/2026-10-29-joker-rule-as-content.md",
       "limitBytes": 8192
     },
     {
       "path": ".agents/notes/implemented/architecture/2026-10-29-msgpack-lite-table-codec.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-tile-identity-by-physical-id.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/architecture/2026-10-29-zone-append-only-and-meld-upgrade.md",
       "limitBytes": 8192
     },
     {

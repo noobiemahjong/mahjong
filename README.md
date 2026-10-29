@@ -1,36 +1,41 @@
 # mahjong
 
-四人麻将（单机 / 局域网 / 公网房间）—— Godot 4.7.2 + C#（net10）重写项目。
+开源的四人麻将游戏，使用 Godot 4.7.2 与 C#（.NET 10）实现。玩法设计为简化地方规则：无立直、无花牌，红中作鬼牌，一场 8 局，只有自摸（含七对），无点炮；目标支持单机（1 真人 + 3 Bot）、局域网 IP 直连、公网房间码对战，并提供赛后全景回放与观战。
 
-进度与任务状态以 [里程碑](docs/milestones/README.md) 任务表为准。
+项目处于早期开发阶段，尚无可玩版本；进度与任务状态以 [里程碑](docs/milestones/README.md) 任务表为准。
 
 ## 文档
 
-- [新成员手册](docs/handbook.md)：环境、跑起来、工作方式、找东西
-- [目标设计 v1.0](docs/DESIGN.md)：架构、tick 引擎、会话流协议、全景回放、断线重连、部署与里程碑
-- [当前实现地图](docs/architecture.md)：M0.1 起随代码更新
-- [文档标准](docs/AGENTS.md)：tier、写作规则、预算、门禁
-- [Agent Notes](.agents/notes/README.md)：决策的 why、放弃的方案
-- [里程碑](docs/milestones/README.md) / [事故复盘](docs/postmortem/README.md)
-- [查表数据](docs/TABLES.md)
-- [旧项目资料](docs/legacy/README.md)：仅素材参考，不作为设计依据
+- [开发手册](docs/handbook.md)：环境、构建、运行与工作方式
+- [设计文档](docs/DESIGN.md)：目标架构、游戏循环、网络协议、回放、部署
+- [架构说明](docs/architecture.md)：当前代码怎么运转
+- [里程碑](docs/milestones/README.md)：阶段计划与任务状态
+- [查表数据](docs/TABLES.md)：`content/tables/` 的格式与来源
+- [决策记录](.agents/notes/README.md)：为什么这样设计、放弃了哪些方案
 
-## 治理
+## 构建与运行
 
-- 共享规矩：[AGENTS.md](AGENTS.md)
-- 开发工作流：[docs/development.md](docs/development.md)
-- 文档标准：[docs/AGENTS.md](docs/AGENTS.md)
-- 决策记录：[.agents/notes/README.md](.agents/notes/README.md)
+前提：
 
-> 治理与开发方式参考 Ursa-Server / Ursa-Client 与 DeepSeek Harness 的文档体系；**不与旧 Unity 版做行为等价**。
+- Windows 10/11
+- [Godot 4.7.2](https://godotengine.org/)（mono / .NET 版）
+- [.NET SDK 10](https://dotnet.microsoft.com/download)（客户端 net10.0 + NativeAOT，服务器 JIT 发布）
+- Windows AOT 导出另需 MSVC C++ 工作负载 + Windows 10 SDK
 
-## 状态
+构建、测试与文档门禁：
 
-- 决策 D1–D18 已拍板（见设计稿 §0）
-- 待办：[M0.1 工程底座](docs/milestones/M0.1-工程底座与内核骨架.md) → [M0.2 单机闭环](docs/milestones/M0.2-单机可玩闭环.md)
+```sh
+dotnet build Mahjong.sln
+dotnet test  Mahjong.sln
+pwsh -File tools/doc-gate/doc-gate.ps1 -Fail
+```
 
-## 构建前提
+运行客户端：用 Godot 打开 `src/Mahjong.Client`，运行 `Startup.tscn`；完整步骤见 [开发手册](docs/handbook.md)。
 
-- Godot 4.7.2（mono / .NET 版）
-- .NET SDK 10（客户端 net10.0 + NativeAOT；服务器 JIT 发布）
-- Windows AOT：MSVC C++ 工作负载 + Windows 10 SDK（M0.1 T-6 冒烟前置）
+## 参与开发
+
+开发约定见 [AGENTS.md](AGENTS.md)，构建与提交流程见 [开发工作流](docs/development.md)，文档写法见 [docs/AGENTS.md](docs/AGENTS.md)；提交前请通过构建、单测与文档门禁。
+
+## 许可证
+
+[Apache License 2.0](LICENSE)。

@@ -23,6 +23,7 @@ window/stretch/mode="canvas_items"
 [dotnet]
 
 project/assembly_name="Mahjong.Client"
+project/solution_directory="../../"
 
 [rendering]
 

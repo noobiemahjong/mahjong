@@ -13,6 +13,7 @@ namespace Mahjong.Tests.Flow;
 /// Stopwatch 计 3 轮、取中位数，用 ITestOutputHelper 打印契约格式；不断言易抖动的绝对耗时。
 /// </summary>
 [Trait("Category", "Benchmark")]
+[Collection("benchmark")]
 public sealed class TickEngineBenchmarkTests
 {
     private const int StepsPerRound = 1_000_000;

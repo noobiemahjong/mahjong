@@ -16,11 +16,13 @@
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md	8192
 .agents/notes/implemented/process/2026-10-28-governance-and-doc-tiers.md	8192
+.agents/notes/implemented/process/2026-10-29-aot-smoke-tool.md	8192
 .agents/notes/implemented/process/2026-10-29-cpm-vs-godot-sdk.md	8192
 .agents/notes/implemented/process/2026-10-29-doc-gate-and-ci-acceptance.md	8192
 .agents/notes/implemented/process/2026-10-29-doc-gate-implementation.md	8192
 .agents/notes/implemented/process/2026-10-29-godot-mcp-plugin-not-tracked.md	8192
 .agents/notes/implemented/process/2026-10-29-nuget-source-pinning.md	8192
+.agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
 CLAUDE.md	4096
@@ -29,6 +31,9 @@ docs/AGENTS.md	6144
 docs/DESIGN.md	65536
 docs/TABLES.md	16384
 docs/architecture.md	8192
+docs/cookbook/aot-export.md	8192
+docs/cookbook/build.md	8192
+docs/cookbook/run.md	8192
 docs/development.md	8192
 docs/engineering/README.md	4096
 docs/engineering/pitfalls/000-template.md	4096
@@ -74,7 +79,10 @@ docs/reference/godot-aot.md	8192
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240
+docs/subsystems/core.md	8192
+docs/subsystems/flow.md	8192
 src/AGENTS.md	4096
 tools/AGENTS.md	4096
+tools/aot-smoke/README.md	4096
 tools/doc-gate/README.md	4096
 tools/git-hooks/README.md	4096

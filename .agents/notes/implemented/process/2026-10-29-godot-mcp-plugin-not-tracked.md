@@ -22,4 +22,4 @@ Godot 侧 MCP 依赖编辑器插件 godot_ai（313 文件、2.7MB）；安装时
 
 - 仓库不承诺开箱即有 Godot MCP；每个开发者/agent 自己装插件并临时启用。
 - `project.godot` 是入库文件，编辑器重启若再把 MCP 项写回来，要在提交前剥掉。
-- T-6 导出前复核 `project.godot` 无 MCP 项，导出产物不含 `_mcp_game_helper`。
+- T-6 的 AOT 冒烟前置复核 `project.godot` 无 MCP 项；`export_presets.cfg` 用 `exclude_filter="addons/godot_ai/*"` 把本机插件排除出导出包，脚本再逐字节断言导出产物不含 `_mcp_game_helper`。

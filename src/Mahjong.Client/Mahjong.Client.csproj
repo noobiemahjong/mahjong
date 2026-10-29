@@ -5,6 +5,9 @@
     <PublishAot>true</PublishAot>
     <!-- Godot.NET.Sdk 以带 Version 的隐式 PackageReference 注入 GodotSharp，与中央包管理冲突 -->
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <!-- GodotSharp 4.7.2 未提供裁剪/AOT 标注，ILC 必然对引用程序集聚合出 IL2104/IL3053；它们不是本仓代码可修的，
+         保持为告警以免全局 TreatWarningsAsErrors 把 NativeAOT 发布判红。 -->
+    <WarningsNotAsErrors>IL2104;IL3053</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,14 +4,14 @@
 
 ## 1. 这个项目是什么
 
-四人麻将（单机 / 局域网 / 公网房间），Godot 4.7.2 + C#（net10）重写；进度与任务状态以 [M0.1 任务表](milestones/M0.1-工程底座与内核骨架.md#5-任务分解) 为准，当前还没有可玩的牌局。
+四人麻将（单机 / 局域网 / 公网房间），Godot 4.7.2 + C#（net10）重写；进度与任务状态以 [里程碑索引](milestones/README.md) 与各阶段任务表为准，当前还没有可玩的牌局。
 
 ## 2. 环境
 
 | 项 | 要求 |
 |---|---|
 | 系统 | Windows 10/11（M0–M4 只支持 Windows；移动端在 M5） |
-| .NET SDK | **10.0.401**；`global.json` 由 M0.1 T-1 创建并锁定 |
+| .NET SDK | **10.0.401**；`global.json` 锁定版本 |
 | Godot | **4.7.2 mono/.NET**，本机路径 `D:\Program Files\Godot_v4.7.2-stable_mono_win64\` |
 | AOT 工具链 | MSVC C++ 工作负载 + Windows 10 SDK（`dotnet publish` AOT 前置）；用 `vswhere`/`ls "C:\Program Files (x86)\Windows Kits\10\Include"` 自检 |
 | Git | 能执行 `git config core.hooksPath tools/git-hooks`（安装提交钩子） |
@@ -19,26 +19,26 @@
 | 内容 | `content/` 已在仓库；查表 6 个 `.bytes` 在 `content/tables/` |
 | Android（M5） | JDK 17、Android SDK 35、NDK 27、adb、Godot Android 导出模板；M5 T-0 探针确认 |
 
-## 3. 第一次跑起来（M0.1 收口后）
+## 3. 第一次跑起来
 
 ````sh
 git clone <repo>
 cd mahjong
+git config core.hooksPath tools/git-hooks   # 每克隆一次
 dotnet build Mahjong.sln -warnaserror
 dotnet test  Mahjong.sln
 pwsh -File tools/doc-gate/doc-gate.ps1 -Fail
 pwsh -File tools/git-hooks/tests/run.ps1     # 钩子自检
-# 运行客户端：用 Godot 打开 src/Mahjong.Client，运行 Startup.tscn
-# AOT 冒烟：pwsh -File tools/aot-smoke/aot-smoke.ps1
+pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 ````
 
-命令按 [M0.1 计划](milestones/M0.1-工程底座与内核骨架.md) 任务表逐项落地；未落地的命令不作为验收证据。
+命令的期望输出、退出码与失败处置见 [cookbook/build](cookbook/build.md)；运行客户端见 [cookbook/run](cookbook/run.md)，AOT 导出与冒烟见 [cookbook/aot-export](cookbook/aot-export.md)。
 
 ## 4. 读文档顺序
 
 1. 根 [AGENTS.md](../AGENTS.md)：常驻规矩。
 2. [docs/AGENTS.md](AGENTS.md)：文档放哪、怎么写。
-3. [architecture.md](architecture.md)：当前实现地图（未实现时看 DESIGN）。
+3. [architecture.md](architecture.md)：当前实现地图；目标设计看 [DESIGN.md](DESIGN.md)。
 4. [DESIGN.md](DESIGN.md)：目标设计与决策索引。
 5. [.agents/notes/](../.agents/notes/README.md)：为什么这么定、放弃过什么。
 6. 当前里程碑计划 + 实施规格；再用 [milestones/README](milestones/README.md) 看全局。
@@ -65,6 +65,7 @@ pwsh -File tools/git-hooks/tests/run.ps1     # 钩子自检
 | 想找 | 去哪 |
 |---|---|
 | 当前代码怎么跑 | [architecture.md](architecture.md) |
+| 构建/运行/导出的具体命令 | [cookbook](cookbook/build.md) |
 | 目标设计/约束 | [DESIGN.md](DESIGN.md) |
 | 为什么做这个选择 | [.agents/notes/](../.agents/notes/README.md) |
 | 当前里程碑/任务状态 | [milestones/README.md](milestones/README.md) |

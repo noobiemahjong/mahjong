@@ -74,6 +74,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-29-aot-smoke-tool.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/process/2026-10-29-cpm-vs-godot-sdk.md",
       "limitBytes": 8192
     },
@@ -91,6 +95,10 @@
     },
     {
       "path": ".agents/notes/implemented/process/2026-10-29-nuget-source-pinning.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
     {
@@ -123,6 +131,18 @@
     },
     {
       "path": "docs/architecture.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/cookbook/aot-export.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/cookbook/build.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/cookbook/run.md",
       "limitBytes": 8192
     },
     {
@@ -306,11 +326,23 @@
       "limitBytes": 10240
     },
     {
+      "path": "docs/subsystems/core.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/subsystems/flow.md",
+      "limitBytes": 8192
+    },
+    {
       "path": "src/AGENTS.md",
       "limitBytes": 4096
     },
     {
       "path": "tools/AGENTS.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "tools/aot-smoke/README.md",
       "limitBytes": 4096
     },
     {

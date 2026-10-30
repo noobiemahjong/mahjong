@@ -39,7 +39,7 @@
   - verb：1 Discard、2 Pong、3 Kong、4 Win、5 Pass、6 Start（房主）、7 Ready。
   - 服务端按 `(seat, requestId)` 幂等；重复返回上次结果。
 - S→C `Batch`：`tick i64, seqBase i64, count u16, (eventType u8, payload)[]`；`seqBase` 为本批第一帧 seq，客户端可算后续 seq。
-- `eventType` 与 [M1 StreamEventKind](../milestones/M1-实施规格.md) 数值一致：0x10 RoundStarted、0x11 TurnStarted、0x12 Drew、0x13 Discarded、0x14 Meld、0x15 RequestOpened、0x16 RequestClosed、0x17 RoundEnded、0x18 GameEnded、0x19 SeatStateChanged。payload 字段以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md) 为唯一权威。
+- `eventType` 与 [M1 StreamEventKind](../milestones/M1-实施规格.md) 数值一致：0x10 RoundStarted、0x11 TurnStarted、0x12 Drew、0x13 Discarded、0x14 Meld、0x15 RequestOpened、0x16 RequestClosed、0x17 RoundEnded、0x18 GameEnded、0x19 SeatStateChanged、0x1A HorseRevealed。payload 字段以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md) 与 [M0.3 规格](../milestones/M0.3-实施规格.md) 为权威。
 - S→C `Sync`：`kind u8, payload`；kind 0 庄家、1 鬼牌、2 座位在线状态、3 tick 校准。
 - C→S `Ack`：`lastAppliedSeq i64`；每 32 帧或 200ms 一次。
 - 心跳：C→S `Ping` 每 5s；S→C `Pong`；任一侧 15s 无有效帧 → 断开。tick 换算：10Hz → 1 tick=100ms。

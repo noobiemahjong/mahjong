@@ -1,6 +1,6 @@
 # Agent Note: 庄家与轮次口径
 
-Status: implemented — 口径已写入 DESIGN D20/§5.7 与 M0.2 T-3，规则变体统一下沉到 post-v1。
+Status: implemented — 口径已写入 DESIGN D20/§5.7 与 M0.2 T-3；规则变体部分已被 [规则变体进 v1](2026-10-30-rule-variants-v1-and-m03.md) 取代。
 
 ## Problem
 
@@ -8,7 +8,7 @@ Status: implemented — 口径已写入 DESIGN D20/§5.7 与 M0.2 T-3，规则�
 
 ## Decision
 
-v1 庄家与轮次按 DESIGN D20/§5.7：起庄随机；庄家本局 14 张先手；行动顺序 `(seat + 1) mod 4`；赢家非庄则下局坐庄，庄家胡或流局庄家不变；庄家不改分数；固定 8 局。连庄奖励、跟庄、中马、承包、抢杠、12 张不在 v1，统一下沉到 post-v1 待排期（DESIGN §16.2），将来走 `content/rules.json` 与 `ScoreActionType` 扩展，不改 8 局契约。
+v1 庄家与轮次按 DESIGN D20/§5.7：起庄随机；庄家本局 14 张先手；行动顺序 `(seat + 1) mod 4`；赢家非庄则下局坐庄，庄家胡或流局庄家不变；固定 8 局。当时把连庄奖励、跟庄、中马、承包、抢杠、12 张放到 post-v1；后续决策改为全部进 v1、落点 M0.3，见 [规则变体进 v1](2026-10-30-rule-variants-v1-and-m03.md)。
 
 M0.2 T-3 只保留 RoundController 的实现口径与测试；DESIGN §5.7 是规则细节的出处。
 
@@ -21,4 +21,4 @@ M0.2 T-3 只保留 RoundController 的实现口径与测试；DESIGN §5.7 是�
 
 ## Consequences
 
-`RoundController` 持有并输出 `bankerSeat`；状态哈希与协议已经包含 `IsBanker`/`bankerSeat`，不需要新字段。连庄奖励将来作为独立计分项与内容配置接入，不影响 8 局契约。UI 在 M0.2 T-6 显示庄家标记，M4 T-5 换成旧素材的庄家/方位指示器。
+`RoundController` 持有并输出 `bankerSeat`；状态哈希与协议已经包含 `IsBanker`/`bankerSeat`，不需要新字段。连庄奖励作为独立计分项在 M0.3 接入，数值走 content/rules.json，不影响 8 局契约。UI 在 M0.2 T-6 显示庄家标记，M4 T-5 换成旧素材的庄家/方位指示器。

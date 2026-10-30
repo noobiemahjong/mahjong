@@ -114,6 +114,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
@@ -260,6 +264,14 @@
     {
       "path": "docs/milestones/M0.2/T-7-收口.md",
       "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.3-实施规格.md",
+      "limitBytes": 16384
+    },
+    {
+      "path": "docs/milestones/M0.3-规则完整化.md",
+      "limitBytes": 12288
     },
     {
       "path": "docs/milestones/M1-回放与流正式化.md",

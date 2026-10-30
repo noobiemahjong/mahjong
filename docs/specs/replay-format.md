@@ -32,7 +32,7 @@
 | type | 名称 | payload |
 |---|---|---|
 | 0x01 | Batch | `frameCount u16 + (type u8 + payload)[]`（同一 tick 合并） |
-| 0x10 | RoundStarted | 同 M0.2 T-5 §1.1 |
+| 0x10 | RoundStarted | 同 M0.2 T-5 §1.1 + M0.3（dealerStreak） |
 | 0x11 | TurnStarted | 同上 |
 | 0x12 | Drew | 同上（全景：真实 tileId） |
 | 0x13 | Discarded | 同上 |
@@ -42,8 +42,9 @@
 | 0x17 | RoundEnded | 同上 |
 | 0x18 | GameEnded | 同上 |
 | 0x19 | SeatStateChanged | 同上 |
+| 0x1A | HorseRevealed | 同 M0.3 规格（horseSeat、tileId 公开） |
 
-payload 字段表以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md#11-事件-payload二进制字段按序) 为唯一权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
+payload 字段表以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md#11-事件-payload二进制字段按序) 与 [M0.3 规格](../milestones/M0.3-实施规格.md) 为权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
 
 ## 4. Index 与 Trailer
 

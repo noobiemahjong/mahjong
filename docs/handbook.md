@@ -45,7 +45,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 
 ## 5. 工作怎么组织
 
-- **里程碑**：M0.1 → M0.2 → M1 → M2 → M3 → M4 → M5；每个有 master 计划、实施规格、验收与完成定义。
+- **里程碑**：M0.1 → M0.2 → M0.3 → M1 → M2 → M3 → M4 → M5；每个有 master 计划、实施规格、验收与完成定义。
 - **任务**：master 任务表是状态唯一权威；开工时建 `M<N>/T-<n>-*.md` 记录判据与实施记录。
 - **决策**：改设计基线写 [Agent Note](../.agents/notes/README.md)（Problem/Decision/Alternatives/Consequences），同批更新 DESIGN。
 - **坑/事故**：坑进 [engineering/pitfalls](engineering/pitfalls/README.md)，事故进 [postmortem](postmortem/README.md)。

@@ -102,6 +102,14 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-30-dealer-rule-and-rule-variant-scope.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-30-m4-art-and-release-acceptance.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md",
       "limitBytes": 8192
     },

@@ -1,7 +1,7 @@
 # 麻将（Godot 重写）设计稿
 
-> 状态：**v1.3 基线**（D1–D22 已拍板，2026-10-30）
-> 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT） → v1.1 增加 D19 鬼牌规则数据化 → v1.2 增加 D20 庄家与轮次、D21 v1 成品化 → v1.3 规则变体进 v1 并新增 M0.3
+> 状态：**v1.4 基线**（D1–D23 已拍板，2026-10-30）
+> 版本记录：v0.1 初稿 → v0.2 引入 net10 + AOT → v1.0 补齐 D4–D18（tick/托管/观战/回放分发/人数/移动端/服务端 JIT） → v1.1 增加 D19 鬼牌规则数据化 → v1.2 增加 D20 庄家与轮次、D21 v1 成品化 → v1.3 规则变体进 v1 并新增 M0.3 → v1.4 单牌墙与庄家首回合摸牌
 > 目标引擎：Godot 4.7.2（mono / .NET 10，net10.0 + NativeAOT）
 > 前置阅读：旧项目资料（`legacy/ARCHITECTURE-unity-legacy.md`）、SGS 参考实现（`E:/learn/sgs`）、GameEventEngine（`E:/learn/GameEventEngine`）
 > 治理：根 [AGENTS.md](../AGENTS.md) · 文档标准 [docs/AGENTS.md](AGENTS.md) · 当前实现 [architecture.md](architecture.md) · 决策 [.agents/notes/](../.agents/notes/README.md)
@@ -39,10 +39,11 @@
 | D20 | 庄家与轮次 | **随机起庄；庄家先手 14 张；非庄胡牌→赢家坐庄，庄家胡/流局连庄**；连庄奖励/跟庄/中马/承包/抢杠/12 张在 v1，规则与数值见 M0.3 规格与 content/rules.json | 规则/流程 |
 | D21 | v1 成品化 | **M4 为 v1 发布候选**：旧素材在 M4 T-5 一次性套用到全部 v1 界面，发布检查单为收口判据 | 表现层/里程碑 |
 | D22 | 规则完整化 | **新增 M0.3（M0.2 与 M1 之间）**：全部规则变体一次做完，M1 金标不复用 M0.2 旧规则 | 规则/里程碑 |
+| D23 | 牌墙与发牌 | **单牌墙**：正常摸头、杠补墙尾、无 WallTail；每人 13 张，庄家首回合摸第 14；中马从墙头翻 | 规则/流程 |
 
 > 本表只保留结论；每条决策的 why、放弃的方案与后果见 [.agents/notes/](../.agents/notes/README.md)。
 
-D1–D22 的推论：
+D1–D23 的推论：
 
 - D1 决定了**权威端需要录制一份不受座位过滤的事件流**；它只在服务端存在，赛后落盘，绝不下发给在线客户端。
 - D2 决定了**观战连接使用与玩家相同的流格式**，只是“可见性策略”不同，不需要单独的协议分支。
@@ -57,6 +58,7 @@ D1–D22 的推论：
 - D20 决定了庄家影响起手/先手/轮换与庄家相关计分；连庄奖励等变体的数值来自 content/rules.json，不改 RoundController 的 8 局契约。
 - D21 决定了 M4 收口以“全部 v1 界面无占位 + 发布检查单”为判据，M5 只做移动端布局，不重做美术。
 - D22 决定了规则变体必须在 M0.3 一次做完，M1 之后不再改规则语义；回放与金标以 M0.3 为准。
+- D23 决定了牌墙只有一条、发牌 13 + 庄家首回合摸 14；StateHash/事件不再有牌尾段，M0.2 T-1b 落地。
 
 ---
 
@@ -202,7 +204,7 @@ D1–D22 的推论：
 | --- | --- |
 | TileType | (suit, rank)，suit 属于 万/筒/条/风/箭；每种 4 张 |
 | TileId | 1..136 的物理牌唯一编号；0 保留；-1 表示“对本消费者不可见” |
-| ZoneId | ENUM：Wall / WallTail / Hand(seat) / Meld(seat) / Discard(seat) / Revealed / DealPresentation |
+| ZoneId | ENUM：Wall / Hand(seat) / Meld(seat) / Discard(seat) / Revealed / DealPresentation（单牌墙，D23） |
 | Slot | Zone 内下标，**插入序**；插入只发生在尾部（Draw），移除按 Slot |
 | TileRef | (zoneId, slot, tileId)；tileId 是“该消费者视角的已知身份”，可为 -1 |
 
@@ -341,7 +343,8 @@ PendingRequest {
 ### 5.7 轮次与庄家
 
 - 每场固定 8 局；第 1 局庄家由服务端 RNG 随机选座，写入 `RoundStarted.bankerSeat` 与 `SyncValue`。
-- 庄家本局多摸 1 张并由庄家先行动；发牌按 `(banker, +1, +2, +3) mod 4` 的顺序，行动按 `(seat + 1) mod 4` 轮转。
+- 牌墙为单墙：发牌每家 13 张，庄家首回合从墙头摸第 14 张；正常摸牌从墙头，杠补从墙尾；牌墙空即流局。
+- 行动按 `(seat + 1) mod 4` 轮转；发牌按 `(banker, +1, +2, +3) mod 4` 的顺序。
 - 局终：赢家非庄则赢家下局坐庄；庄家自摸胡或流局则庄家不变；8 局后按总分排名。
 - 庄家相关计分：连庄奖励、跟庄、中马、承包、抢杠、12 张均在 v1，规则表与数值见 [M0.3 实施规格](milestones/M0.3-实施规格.md#t-1-规则表与数值定稿) 与 content/rules.json。
 
@@ -768,7 +771,7 @@ mahjong/
 
 ### 16.2 待决问题（需要你拍板）
 
-D1–D22 已全部拍板。剩下的是“实现后才有数据”或“以后再定”的项，不阻塞 M0.1/M0.2；规则变体细则归 M0.3 T-1：
+D1–D23 已全部拍板。剩下的是“实现后才有数据”或“以后再定”的项，不阻塞 M0.1/M0.2；规则变体细则归 M0.3 T-1：
 
 1. **Bot 基线口径（D17）**：M0.2 结束时测一套基线（常驻内存、冷加载耗时、单步决策耗时、单局耗时），M4 据此定优化目标并复测；现在不预设数字。
 2. **M5 移动端**：平台顺序与最低配置（Android 先；minSdk 26、arm64-v8a、4GB RAM 中端机，见 M5 规格）；Godot 4.7.2 + net10 + AOT 的 Android 链路需 T-0 实测，iOS 更晚。
@@ -776,7 +779,7 @@ D1–D22 已全部拍板。剩下的是“实现后才有数据”或“以后�
 4. **局域网房主退出后**：v1 直接结束房间回大厅，不实现“继任房主/重开”；若朋友局高频遇到，再评估。
 5. **语音**：确认不内置语音聊天（D15），文档/UI 提示玩家使用外部语音工具。
 6. **规则变体细则**：已拍板进 v1，落点 M0.3；规则表与数值待逐条评审（见 [M0.3 实施规格](milestones/M0.3-实施规格.md#t-1-规则表与数值定稿)）。
-7. **牌墙模型**：当前实现为 `Wall` 69 + `WallTail` 14；目标广东麻将规则是单牌墙（正常摸头、杠补墙尾、无预留）。修正落点、庄家发牌时序、中马翻牌端待拍板，见 [proposed Note](../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+7. **牌墙模型**：已拍板为单牌墙（正常摸头、杠补墙尾、无预留）+ 庄家首回合摸第 14 张 + 中马从墙头翻；落点 [M0.2 T-1b](milestones/M0.2/T-1b-单牌墙与发牌修正.md)，背景见 [proposed Note](../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
 
 ---
 
@@ -829,7 +832,7 @@ D1–D22 已全部拍板。剩下的是“实现后才有数据”或“以后�
 
 | 事件 | 可见性 | 说明 |
 | --- | --- | --- |
-| RoundStarted | 公开 | 局号、庄家、连庄次数、牌墙/牌尾数量 |
+| RoundStarted | 公开 | 局号、庄家、连庄次数、牌墙数量 |
 | TurnStarted | 公开 | 当前座位、deadline tick |
 | Drew | 本人/公开(数量) | 摸牌；本人含 tileId，他人仅数量 |
 | Discarded | 公开 | 座位、slot、tileId |

@@ -59,6 +59,7 @@ docs/milestones/M0.1/T-5-tick引擎.md	10240
 docs/milestones/M0.1/T-6-基线收口.md	10240
 docs/milestones/M0.2-单机可玩闭环.md	12288
 docs/milestones/M0.2/T-1-胡牌与七对.md	10240
+docs/milestones/M0.2/T-1b-单牌墙与发牌修正.md	10240
 docs/milestones/M0.2/T-2-技能与响应.md	10240
 docs/milestones/M0.2/T-3-计分与轮次.md	10240
 docs/milestones/M0.2/T-4-Bot.md	10240

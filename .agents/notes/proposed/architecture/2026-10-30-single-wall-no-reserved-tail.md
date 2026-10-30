@@ -1,6 +1,6 @@
 # Agent Note: 单牌墙，无预留牌尾
 
-Status: proposed — 目标为单牌墙；当前实现仍是 Wall 69 + WallTail 14，代码未改。
+Status: proposed — 已拍板落点 M0.2 T-1b；当前代码仍是 Wall 69 + WallTail 14，未改。
 
 ## Problem
 
@@ -8,7 +8,7 @@ Status: proposed — 目标为单牌墙；当前实现仍是 Wall 69 + WallTail 
 
 ## Decision
 
-目标模型为**单牌墙**：发牌后只剩一条牌墙；正常摸牌从墙头；杠后补牌从同一牌墙的墙尾；流局判据为牌墙空；不存在 `WallTail` 区，也不存在 `tailCount`。当前代码不变，修正落点、庄家发牌时序、中马翻牌端三项待拍板；修正前 M0.2 T-2/T-5 的 69/14 表述不得作为最终开发依据。
+目标模型为**单牌墙**：发牌后只剩一条牌墙；正常摸牌从墙头；杠后补牌从同一牌墙的墙尾；流局判据为牌墙空；不存在 `WallTail` 区，也不存在 `tailCount`。落点定为 **M0.2 T-1b**；庄家每人发 13 张、首回合摸第 14 张；中马从墙头翻；承包与连庄/跟庄/中马独立叠加。当前代码不变，按 M0.2 T-1b 落地。
 
 ## Alternatives considered
 
@@ -21,4 +21,4 @@ Status: proposed — 目标为单牌墙；当前实现仍是 Wall 69 + WallTail 
 
 修正后要同步：`ZoneKind`/`ZoneId` 去掉 `WallTail`；`Deal` 不再拆 14 张；`DrawFromTail` 从牌墙末尾取；`IsWallEmpty` 看整墙；StateHash 去掉牌尾段；`RoundStarted`/`Drew` 只保留 `wallCount`；M0.1 T-4/T-5 金标与单测重录；M0.2 T-2/T-5 规格与事件字段改单墙；M0.3 规则表的墙/中马/12 张表述按单墙复核；DESIGN、core.md、architecture、protocol/replay 同步。
 
-验收判据（修正任务落地时）：发牌后 `Wall.Count` 为 83（庄家发牌 14 张口径）或 84（庄家首回合摸第 14 张口径，按 Q2 决定）；不存在 `WallTail`；`DrawFromTail` 取走墙尾且 `Wall.Count` 减 1；`IsWallEmpty` 只在整墙空时为真；StateHash 不再含牌尾段；`dotnet test` 全绿；doc-gate 0 error；金标重录并在 M0.2 结果记录。
+验收判据（M0.2 T-1b 落地时）：发牌后 `Wall.Count = 84`、四家各 13；庄家首回合摸牌后 `Wall.Count = 83`、庄家 14；不存在 `WallTail`；`DrawFromTail` 取走墙尾且 `Wall.Count` 减 1；`IsWallEmpty` 只在整墙空时为真；StateHash 版本 2 且不再含牌尾段；`RoundStarted`/`Drew` 只留 `wallCount`；`dotnet test` 全绿；doc-gate 0 error；金标重录并在 M0.2 结果记录。

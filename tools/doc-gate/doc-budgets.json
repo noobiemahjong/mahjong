@@ -246,6 +246,10 @@
       "limitBytes": 10240
     },
     {
+      "path": "docs/milestones/M0.2/T-1b-单牌墙与发牌修正.md",
+      "limitBytes": 10240
+    },
+    {
       "path": "docs/milestones/M0.2/T-2-技能与响应.md",
       "limitBytes": 10240
     },

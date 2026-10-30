@@ -57,9 +57,10 @@
 | `docs/AGENTS.md` | 6 KB |
 | `docs/development.md` | 8 KB |
 | `docs/architecture.md` | 8 KB |
+| `docs/subsystems/**` | 10 KB |
 | `docs/DESIGN.md` | 64 KB |
 | `docs/TABLES.md` | 16 KB |
-| `docs/legacy/**`（历史资料） | 64 KB |
+| `docs/legacy/**` | 64 KB |
 | 各级 `README.md` / 模板 / `CLAUDE.md` | 4 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
 | 单篇 task（`M<N>/T-*`）/ reference | 10 KB / 8 KB |

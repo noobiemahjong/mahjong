@@ -51,7 +51,7 @@
 - `IRequestRegistry` 两个方法：`BeginTick(tick)` 把到期未应答的请求写成超时、把被取消的请求写成取消；`TryConsume(requestId, out outcome)` 同一结算只成功一次。
 - `RequestOutcomeKind : byte` 取 Answered 0、TimedOut 1、Cancelled 2；`RequestOutcome(long RequestId, RequestOutcomeKind Kind, object? Payload)` 是一次结算。
 - `RequestKind : byte` 取 Discard 0、Pong 1、Kong 2、Win 3、Pass 4；`PendingRequest(long RequestId, byte Seat, RequestKind Kind, AllowedVerbs Allowed, long DeadlineTick)` 是待结算请求。
-- `RequestGroup(long requestGroupId, IEnumerable<PendingRequest> requests)` 是同一时刻向多个座位征询的只读快照，构造时复制传入集合、顺序保持；仲裁与产出结算由会话负责。
+- `RequestGroup(long requestGroupId, IEnumerable<PendingRequest> requests)` 是同一时刻向多个座位征询的只读快照，构造时复制传入集合、顺序保持；弃牌响应窗口的仲裁与逐座结算见 §8，注册表挂接由会话适配。
 
 ## 6. 触发器与事件参数
 
@@ -80,3 +80,13 @@ u16 roundNo
 
 - 只哈希模型字段：不含时间、会话、日志、内容清单与规则版本；动作树与请求状态不参与。
 - 先按布局量出字节数再一次性分配写入；`state` 为 null 抛 `ArgumentNullException`；同一实现同输入必得同一 hex，跨实现对齐以本布局为准；布局背景见 [单牌墙 Note](../../.agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+
+## 8. 弃牌响应窗口
+
+- `ResponseWindow(long firstRequestId = 1)` 按本窗口候选顺序给每座分配连续 `requestId`（`firstRequestId + i`）。
+- `Open(discard, candidates, deadlineTick)` 单次使用：已开过（含已关）再开抛 `InvalidOperationException`；`candidates` null、候选 null 抛 `ArgumentNullException`；候选超过 3 个、座位重复、`discard.Id == Tile.UnknownId` 抛 `ArgumentException`；`deadlineTick < 0` 抛 `ArgumentOutOfRangeException`。候选 0–3 座（0 表示无人可响应，合法）。每座生成 `PendingRequest(id, seat, RequestKind.Pong, AllowedVerbs.Pong | Kong | Pass, deadlineTick)`，`Requests` 顺序=候选顺序，开窗前为空只读列表。
+- `TrySubmit(player, skill, requestId, arrivalSeq)` 收碰/杠应答；`TryPass(player, requestId, arrivalSeq)` 收显式过（`CommandVerb.Pass`）。`player` 为 null 抛 `ArgumentNullException`；窗口未开/已关、非候选、`requestId` 不匹配、技能不是 Pong/Kong、迟到（`arrivalSeq > deadlineTick`）、该座已应答都返回 false 且不改状态；Pass 不计胜者但占用应答。
+- `arrivalSeq` 是到达批次（逻辑 tick）：同一 tick 的应答传同一值，跨 tick 单调递增；窗口不读时钟。
+- `Close(tick)`：未开窗抛 `InvalidOperationException`；`tick >= deadlineTick` 或全体已应答才允许，否则抛 `InvalidOperationException`；已关闭后再调为幂等 no-op。逐座产出 `RequestOutcome`（顺序=候选顺序）：胜者 `Answered`（Payload=boxed `SkillId`）、提交竞争技能但落败者 `Cancelled`（2）、显式 Pass 者 `Answered`（Payload=null）、未应答者 `TimedOut`（1）。
+- 仲裁键固定 `(优先级 杠 > 碰, arrivalSeq 升序, 座位升序)`；`ResponseResult` 暴露 `HasWinner`、`WinnerSeat`（无胜者 255）、`WinnerSkill`（`SkillId?`）、`TargetCard`、`Outcomes`、`Requests`，`Result` 在 Close 前为 null；窗口另暴露 `Discard`/`DeadlineTick`/`IsOpen`/`AllAnswered`。
+- 窗口不做游戏合法性判断（调用方先过 `CardAndSkillVerifier`），也不实现 `IRequestRegistry`：注册表挂接、超时驱入与座位过滤由 T-5 会话适配。

@@ -56,10 +56,10 @@ public sealed class ContentCatalogTests
 
         Assert.Equal(
             [
-                new Skill(1, "Pong"),
-                new Skill(2, "Kong"),
-                new Skill(3, "SelfDrawn"),
-                new Skill(4, "SelfDrawnWith7Pairs"),
+                new SkillDefinition(1, "Pong"),
+                new SkillDefinition(2, "Kong"),
+                new SkillDefinition(3, "SelfDrawn"),
+                new SkillDefinition(4, "SelfDrawnWith7Pairs"),
             ],
             catalog.Skills);
     }
@@ -125,6 +125,18 @@ public sealed class ContentCatalogTests
         {
             DeleteDirectory(copy);
         }
+    }
+
+    [Fact]
+    public void RepoContent_SkillsExposeSkillDefinitions_AfterRename()
+    {
+        // 内容元数据类型由 Skill 改名 SkillDefinition，技能动作类型占用 Skill 名字（协议/规则分家）。
+        var catalog = LoadRepoContent();
+
+        SkillDefinition definition = catalog.GetSkill(4);
+        Assert.Equal(new SkillDefinition(4, "SelfDrawnWith7Pairs"), definition);
+        Assert.IsType<SkillDefinition>(catalog.Skills[0]);
+        Assert.Equal(4, catalog.Skills.Count);
     }
 
     private static ContentCatalog LoadRepoContent() => ContentCatalog.Load(RepoPaths.ContentDirectory);

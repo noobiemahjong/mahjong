@@ -72,10 +72,10 @@ public sealed class EndToEndTests
 
         Assert.Equal(
             [
-                new Skill(1, "Pong"),
-                new Skill(2, "Kong"),
-                new Skill(3, "SelfDrawn"),
-                new Skill(4, "SelfDrawnWith7Pairs"),
+                new SkillDefinition(1, "Pong"),
+                new SkillDefinition(2, "Kong"),
+                new SkillDefinition(3, "SelfDrawn"),
+                new SkillDefinition(4, "SelfDrawnWith7Pairs"),
             ],
             catalog.Skills);
 

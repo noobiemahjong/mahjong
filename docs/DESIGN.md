@@ -103,7 +103,7 @@ D1–D23 的推论：
 | TileRef | (zone, slot, tileId)；tileId = -1 表示对该消费者不可见 |
 | Reveal | 把某个 TileRef 的身份揭示给某条流 |
 | PendingRequest | 服务端正在等待某个座位作答的请求（含 deadline tick） |
-| RequestGroup | 同时向多个座位发问、取首个合法响应的请求组（碰/杠竞速；自摸不走响应窗口） |
+| RequestGroup | 同时向多个座位发问的请求组；胜者按「杠 > 碰 → 到达批次 `arrivalSeq` → 座位号升序」仲裁（碰/杠竞速；自摸不走响应窗口） |
 
 ---
 
@@ -308,10 +308,12 @@ PendingRequest {
 
 **RequestGroup（碰/杠竞速；无点炮/荣和）：**
 
-- 同时向最多 3 个候选座位发问，deadline 相同；
-- 首个**合法**应答获胜；其余座位收到 `RequestClosed{cancelled}`；
-- 仲裁结果写入流：每个候选一条 `RequestClosed{outcome}`（胜者 answered、其余 cancelled），客户端不参与仲裁；
-- 同到达顺序的公平性：按服务端到达顺序；若同一 tick 内到达，按座位号升序（显式规则，便于测试）。
+- 同时向最多 3 个候选座位发问，deadline 相同；窗口按候选顺序给每座分配连续 requestId；
+- 胜者按固定仲裁键判定：**优先级（杠 > 碰）→ 到达批次 arrivalSeq（逻辑 tick）→ 座位号升序**；杠在任何 tick 都压过碰，跨 tick 先到先得只在同优先级内成立；
+- 仲裁结果写入流：每个候选一条 `RequestClosed{outcome}`（胜者 answered、提交了竞争技能但落败者 cancelled、显式 Pass 者 answered、未应答者 timeout），客户端不参与仲裁；
+- 显式「过」是应答（`CommandVerb.Pass`），不是「不提交」；迟到判据是 arrivalSeq > deadlineTick，窗口不读墙钟，也不实现 `IRequestRegistry`（注册表/超时挂接由 T-5 会话适配）。
+
+仲裁键、窗口接缝与放弃的方案见 [技能与响应窗口 Note](../.agents/notes/implemented/architecture/2026-10-30-skill-and-response-window.md)，口径权威见 [M0.2 T-2](milestones/M0.2/T-2-技能与响应.md) §2。
 
 ### 5.4 随机与确定性
 
@@ -812,7 +814,7 @@ D1–D23 已全部拍板。剩下的是“实现后才有数据”或“以后�
 | MahjongGame（379 行上帝对象） | Flow + Session 拆分 | 重写结构，保留语义 |
 | Card / CardType / SuitType | Tile / TileType | 移植 |
 | CompositeCard / CompositeCardMessage | Meld / MeldRef | 移植（去掉 Netcode 序列化） |
-| Skill / SkillResource / SkillRegistry | Skill + content/skills.json | 移植逻辑，配置外置 |
+| Skill / SkillResource / SkillRegistry | Skill（动作）+ SkillDefinition（内容） | 移植逻辑，配置外置 |
 | Trigger / GameEvent / GameEventArgs | Flow 的 Trigger/Action | 移植并接入 tick 引擎 |
 | ScoreManager / ScoreActionType | 规则层保留 | 移植；番种配置化留 M4 |
 | WinningCardDetector / BotDecisionMaker | Rules / BotPolicy | 移植；表格式先沿用 |

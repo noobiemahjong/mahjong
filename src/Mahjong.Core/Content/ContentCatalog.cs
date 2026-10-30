@@ -60,11 +60,11 @@ public sealed class ContentCatalog
 
     private readonly TileType[] _tileTypes;
     private readonly Suit[] _suits;
-    private readonly Skill[] _skills;
+    private readonly SkillDefinition[] _skills;
     private readonly byte[] _contentHash;
     private readonly string _contentHashHex;
 
-    private ContentCatalog(TileType[] tileTypes, Suit[] suits, Skill[] skills, JokerRule joker, byte[] contentHash)
+    private ContentCatalog(TileType[] tileTypes, Suit[] suits, SkillDefinition[] skills, JokerRule joker, byte[] contentHash)
     {
         _tileTypes = tileTypes;
         _suits = suits;
@@ -84,7 +84,7 @@ public sealed class ContentCatalog
     public IReadOnlyList<Suit> Suits { get; }
 
     /// <summary>4 个技能，按 id 升序。</summary>
-    public IReadOnlyList<Skill> Skills { get; }
+    public IReadOnlyList<SkillDefinition> Skills { get; }
 
     /// <summary>内容哈希的原始 32 字节；协议/回放传原始字节，不传 hex 字符串。</summary>
     public ReadOnlyMemory<byte> ContentHash => _contentHash;
@@ -158,7 +158,7 @@ public sealed class ContentCatalog
 
     /// <summary>按技能 id 取技能。</summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> 不在 1–4。</exception>
-    public Skill GetSkill(int id)
+    public SkillDefinition GetSkill(int id)
     {
         if (id < 1 || id > _skills.Length)
         {
@@ -347,7 +347,7 @@ public sealed class ContentCatalog
         return suits;
     }
 
-    private static Skill[] ParseSkills(byte[] utf8Json, string path)
+    private static SkillDefinition[] ParseSkills(byte[] utf8Json, string path)
     {
         var document = Deserialize(utf8Json, path, ContentJsonContext.Default.SkillsDocument);
         if (document.Version != ContentFormatVersion)
@@ -397,7 +397,7 @@ public sealed class ContentCatalog
             }
         }
 
-        var skills = new Skill[ExpectedSkills.Length];
+        var skills = new SkillDefinition[ExpectedSkills.Length];
         for (var index = 0; index < entries.Count; index++)
         {
             var entry = entries[index]!;
@@ -409,7 +409,7 @@ public sealed class ContentCatalog
                     $"skills[{index}]: id {entry.Id} must be named '{expectedName}' but was '{entry.Name ?? "<null>"}'.");
             }
 
-            skills[entry.Id - 1] = new Skill(entry.Id, entry.Name!);
+            skills[entry.Id - 1] = new SkillDefinition(entry.Id, entry.Name!);
         }
 
         return skills;

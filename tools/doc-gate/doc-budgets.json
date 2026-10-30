@@ -62,6 +62,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-10-30-skill-and-response-window.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md",
       "limitBytes": 8192
     },
@@ -119,6 +123,10 @@
     },
     {
       "path": ".agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md",
       "limitBytes": 8192
     },
     {
@@ -363,11 +371,11 @@
     },
     {
       "path": "docs/subsystems/core.md",
-      "limitBytes": 8192
+      "limitBytes": 10240
     },
     {
       "path": "docs/subsystems/flow.md",
-      "limitBytes": 8192
+      "limitBytes": 10240
     },
     {
       "path": "src/AGENTS.md",

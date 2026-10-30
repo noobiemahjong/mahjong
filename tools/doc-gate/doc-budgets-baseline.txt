@@ -13,6 +13,7 @@
 .agents/notes/implemented/architecture/2026-10-29-state-hash-byte-layout.md	8192
 .agents/notes/implemented/architecture/2026-10-29-tile-identity-by-physical-id.md	8192
 .agents/notes/implemented/architecture/2026-10-29-zone-append-only-and-meld-upgrade.md	8192
+.agents/notes/implemented/architecture/2026-10-30-skill-and-response-window.md	8192
 .agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md	8192
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
@@ -28,6 +29,7 @@
 .agents/notes/implemented/process/2026-10-30-m4-art-and-release-acceptance.md	8192
 .agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md	8192
 .agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md	8192
+.agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
@@ -88,8 +90,8 @@ docs/reference/godot-aot.md	8192
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240
-docs/subsystems/core.md	8192
-docs/subsystems/flow.md	8192
+docs/subsystems/core.md	10240
+docs/subsystems/flow.md	10240
 src/AGENTS.md	4096
 tools/AGENTS.md	4096
 tools/aot-smoke/README.md	4096

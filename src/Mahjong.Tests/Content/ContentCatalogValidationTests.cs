@@ -45,10 +45,10 @@ public sealed class ContentCatalogValidationTests
         Assert.Equal(new Suit(SuitType.Dragon, 3, 4, false), catalog.Suits[4]);
 
         Assert.Equal(4, catalog.Skills.Count);
-        Assert.Equal(new Skill(1, "Pong"), catalog.Skills[0]);
-        Assert.Equal(new Skill(2, "Kong"), catalog.Skills[1]);
-        Assert.Equal(new Skill(3, "SelfDrawn"), catalog.Skills[2]);
-        Assert.Equal(new Skill(4, "SelfDrawnWith7Pairs"), catalog.Skills[3]);
+        Assert.Equal(new SkillDefinition(1, "Pong"), catalog.Skills[0]);
+        Assert.Equal(new SkillDefinition(2, "Kong"), catalog.Skills[1]);
+        Assert.Equal(new SkillDefinition(3, "SelfDrawn"), catalog.Skills[2]);
+        Assert.Equal(new SkillDefinition(4, "SelfDrawnWith7Pairs"), catalog.Skills[3]);
 
         Assert.Equal(JokerMode.FixedType, catalog.Joker.Mode);
         Assert.Equal(new TileType(31, SuitType.Dragon, 1), catalog.Joker.Type);
@@ -78,7 +78,7 @@ public sealed class ContentCatalogValidationTests
         Assert.Throws<ArgumentOutOfRangeException>(() => { _ = catalog.GetSuit((SuitType)0); });
         Assert.Throws<ArgumentOutOfRangeException>(() => { _ = catalog.GetSuit((SuitType)6); });
 
-        Assert.Equal(new Skill(4, "SelfDrawnWith7Pairs"), catalog.GetSkill(4));
+        Assert.Equal(new SkillDefinition(4, "SelfDrawnWith7Pairs"), catalog.GetSkill(4));
         Assert.Throws<ArgumentOutOfRangeException>(() => { _ = catalog.GetSkill(0); });
         Assert.Throws<ArgumentOutOfRangeException>(() => { _ = catalog.GetSkill(5); });
     }
@@ -318,11 +318,11 @@ public sealed class ContentCatalogValidationTests
         content.RebuildManifest();
 
         var catalog = ContentCatalog.Load(content.Root);
-        Assert.Equal(new Skill(1, "Pong"), catalog.Skills[0]);
-        Assert.Equal(new Skill(2, "Kong"), catalog.Skills[1]);
-        Assert.Equal(new Skill(3, "SelfDrawn"), catalog.Skills[2]);
-        Assert.Equal(new Skill(4, "SelfDrawnWith7Pairs"), catalog.Skills[3]);
-        Assert.Equal(new Skill(4, "SelfDrawnWith7Pairs"), catalog.GetSkill(4));
+        Assert.Equal(new SkillDefinition(1, "Pong"), catalog.Skills[0]);
+        Assert.Equal(new SkillDefinition(2, "Kong"), catalog.Skills[1]);
+        Assert.Equal(new SkillDefinition(3, "SelfDrawn"), catalog.Skills[2]);
+        Assert.Equal(new SkillDefinition(4, "SelfDrawnWith7Pairs"), catalog.Skills[3]);
+        Assert.Equal(new SkillDefinition(4, "SelfDrawnWith7Pairs"), catalog.GetSkill(4));
     }
 
     [Fact]

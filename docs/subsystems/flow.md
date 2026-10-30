@@ -62,6 +62,8 @@
 
 `StateHash.Compute(GameState)` 把模型字段按固定布局编码后取 SHA-256，返回 64 字符小写 hex；整型小端、长度前缀 `u16`、布局版本写在首字节。
 
+> **已知偏差**：`tailCount` 段属于待修正的 `WallTail` 模型；单牌墙修正见 [proposed Note](../../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+
 ```
 u8  version = 1
 u16 wallCount + wallCount × u16 tileId        // 槽位顺序，不排序

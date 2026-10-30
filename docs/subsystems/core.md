@@ -45,6 +45,7 @@
 - `PlayerState(byte seat)`：`Hand`、`Discards`、`Melds`（`List<Meld>`，按声明顺序追加）、`Score`（short）、`IsBanker`。
 - `GameState`：4 名玩家、物理牌 136 张。`Deal(rng, bankerSeat)` 用 Fisher-Yates 洗 1–136，末 14 张进 `WallTail`、其余 122 张进 `Wall`，按 `(bankerSeat,+1,+2,+3) mod 4` 各发 13 张、庄家再摸 1 张，发牌后剩 `Wall` 69 张 / `WallTail` 14 张；同 seed 同 `bankerSeat` 得同一全槽位；`rng` 为 null 抛 `ArgumentNullException`，`bankerSeat` 大于 3 抛 `ArgumentOutOfRangeException`。
 - `DrawFromWall(seat)` 从 `Wall` 头部、`DrawFromTail(seat)` 从 `WallTail` 末端取牌并追加到该座位手牌尾部；空墙/空牌尾抛 `InvalidOperationException`。`IsWallEmpty` 只看 `Wall`。
+- **已知偏差**：`WallTail` 是待修正模型；目标为单牌墙（正常摸头、杠补墙尾、无预留），见 [proposed Note](../../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
 - `Discard(seat, handSlot)` 把手牌槽位的牌移到弃牌区尾部，槽位越界抛 `InvalidOperationException`；`CurrentSeat` setter 取 0–3、`RoundNo` setter 取 1–8，越界抛 `ArgumentOutOfRangeException`。
 - `DeclareMeld(seat, kind, handSlots, targetSeat, targetDiscardSlot = null)`：手牌槽数碰 2、明杠 3、暗杠 4、补杠 1 且互不重复；碰与明杠要求 `targetSeat` 在 0–3、不等于声明座位、`targetDiscardSlot` 非空，暗杠与补杠要求 255 且 null；校验先于状态修改，失败时状态不变；返回新建副露，补杠返回被原地升级的既有碰；副露本身不摸牌。
 

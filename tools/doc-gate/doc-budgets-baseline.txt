@@ -28,6 +28,7 @@
 .agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md	8192
 .agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
+.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
 CLAUDE.md	4096

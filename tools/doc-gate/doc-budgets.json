@@ -122,6 +122,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md",
       "limitBytes": 8192
     },

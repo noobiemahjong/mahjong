@@ -39,10 +39,20 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1       # L3 客户端 AOT 冒烟（里�
 | 通道 | 范围 | 强度 | 不通时 |
 |---|---|---|---|
 | Godot MCP（当前环境提供的 Godot 编辑器 MCP） | 场景/节点/UI/资源/运行态 | **硬门禁** | 停下，要求用户启动 Godot 编辑器与对应 MCP server，不降级 |
-| C# 符号 MCP（Roslyn/VS，若当前环境提供） | C# 符号、调用链、工程结构、编译诊断 | 必须优先 | 不可用可回退 `grep`/`read`，汇报里逐处说明理由 |
+| C# 符号 MCP：Visual Studio 打开 `Mahjong.sln` 后托管的 `MSVC MCP SDK Server`，端点 `http://localhost:3011/SDK/` | Roslyn 符号/定义/引用/调用链、工程与引用、编译诊断、构建/测试、调试器、VS 输出窗口 | 必须优先 | 先确认 VS 打开 `Mahjong.sln` 且扩展运行；仍不可用可回退 `grep`/`read`，汇报里逐处说明理由 |
 | 仓库内数据 | 查表、回放、内容 | — | 用 `tools/table-inspect` 或 python/msgpack 实读 |
 
-- **不绑定具体 MCP server 名**：其他项目的专用 MCP server 不属于本项目；以当前环境实际配置为准，开工先列可用 server 再选。
+- **本项目 C# 符号通道只认 `Mahjong.sln` 承载的 server**：其他项目的 Roslyn MCP（如 Ursa 的 3001/3003）属于别的解决方案，不作为本项目依据；开工先探活本项目通道，不可用时按上表降级并说明。
+- DSH 注册项为 `mcp-mahjong`（`~/.dsh/profiles/desktop/cordis.patch.yml`，`transport: streamable-http`，`url: http://localhost:3011/SDK/`）；改 profile 后需重启 DSH 或开新会话生效，工具前缀为 `mcp__mahjong__`。
+- 端口由 VS 扩展的本机设置 `.mcp/mcpserver.settings.json` 决定（默认 3011）；`.mcp/` 与 `.vs/` 是本机状态，不入库。
+- 探活（VS 已打开 `Mahjong.sln`）：
+
+```sh
+curl -s -X POST http://localhost:3011/SDK/ -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}'
+# 期望 result.serverInfo.name = MSVC MCP SDK Server
+```
+
 - 外部仓库（旧 Unity、`E:/learn` 下的参考仓）与 `docs/**` 不在 C# 索引内，用文件读取/搜索是正解，不算回退。
 - MCP 快照是「取用那一刻」的视图；跨轮复用旧读数前重新取。
 - MCP 写操作（改场景、改资产、导入）必须属于已确认任务；顺手改 = 违规。

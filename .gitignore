@@ -7,5 +7,7 @@ src/Mahjong.Client/content/
 .reviews2/
 *.user
 .godot/
+.vs/
+.mcp/
 *.uid
 src/Mahjong.Client/addons/godot_ai/

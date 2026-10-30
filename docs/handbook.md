@@ -15,7 +15,7 @@
 | Godot | **4.7.2 mono/.NET**，本机路径 `D:\Program Files\Godot_v4.7.2-stable_mono_win64\` |
 | AOT 工具链 | MSVC C++ 工作负载 + Windows 10 SDK（`dotnet publish` AOT 前置）；用 `vswhere`/`ls "C:\Program Files (x86)\Windows Kits\10\Include"` 自检 |
 | Git | 能执行 `git config core.hooksPath tools/git-hooks`（安装提交钩子） |
-| MCP | Godot MCP；C# 符号 MCP（若当前环境提供）。**以实际配置为准，不绑定特定 server 名**；开工先探活，见 [development](development.md) |
+| MCP | C# 符号 MCP：Visual Studio 打开 `Mahjong.sln` 后托管，端点 `http://localhost:3011/SDK/`（DSH 注册名 `mahjong`）；Godot MCP 另按需启用；开工先探活，见 [development](development.md) |
 | 内容 | `content/` 已在仓库；查表 6 个 `.bytes` 在 `content/tables/` |
 | Android（M5） | JDK 17、Android SDK 35、NDK 27、adb、Godot Android 导出模板；M5 T-0 探针确认 |
 
@@ -86,7 +86,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 
 ## 9. 如果卡住
 
-1. Godot/Roslyn MCP 是否可用？不可用按 [development](development.md) 的降级规则处理。
+1. Godot MCP 与本项目 C# MCP 是否可用？不可用按 [development](development.md) 的降级规则处理。
 2. 看当前里程碑「风险」与「已知缺口」。
 3. 决策冲突先写 Note，不要私改基线。
 4. 仍然卡住：把「现象 + 已查文档 + 已跑命令」写清楚再问。

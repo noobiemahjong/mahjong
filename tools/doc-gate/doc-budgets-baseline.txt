@@ -23,6 +23,7 @@
 .agents/notes/implemented/process/2026-10-29-doc-gate-implementation.md	8192
 .agents/notes/implemented/process/2026-10-29-godot-mcp-plugin-not-tracked.md	8192
 .agents/notes/implemented/process/2026-10-29-nuget-source-pinning.md	8192
+.agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144

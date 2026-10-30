@@ -102,6 +102,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },

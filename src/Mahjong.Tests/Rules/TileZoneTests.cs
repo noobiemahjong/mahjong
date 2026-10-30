@@ -209,7 +209,7 @@ public sealed class TileZoneTests
     public void Capacity_AcceptsZeroAndPositive()
     {
         Assert.Equal(0, new TileZone(HandZone, 0).Count);
-        Assert.Equal(0, new TileZone(HandZone, 122).Count);
+        Assert.Equal(0, new TileZone(HandZone, 84).Count);
         Assert.Equal(0, new TileZone(HandZone, 136).Count);
     }
 
@@ -238,17 +238,28 @@ public sealed class TileZoneTests
     {
         Assert.Equal(255, (int)ZoneId.PublicSeat);
         Assert.Equal(new ZoneId(ZoneId.PublicSeat, ZoneKind.Wall), new ZoneId(255, ZoneKind.Wall));
-        Assert.NotEqual(new ZoneId(0, ZoneKind.Wall), new ZoneId(0, ZoneKind.WallTail));
+        Assert.NotEqual(new ZoneId(0, ZoneKind.Wall), new ZoneId(0, ZoneKind.Hand));
         Assert.NotEqual(new ZoneId(1, ZoneKind.Hand), new ZoneId(2, ZoneKind.Hand));
     }
 
     [Fact]
-    public void ZoneKind_DeclaresSixZonesInSpecifiedOrder()
+    public void ZoneKind_DeclaresFiveZonesInSpecifiedOrderWithFixedValues()
     {
         Assert.Same(typeof(byte), Enum.GetUnderlyingType(typeof(ZoneKind)));
+
+        // 单牌墙：不存在 WallTail；数值是协议与回放编码的一部分，顺序与取值都必须固定。
         Assert.Equal(
-            new[] { "Wall", "WallTail", "Hand", "Meld", "Discard", "Revealed" },
+            new[] { "Wall", "Hand", "Meld", "Discard", "Revealed" },
             Enum.GetNames<ZoneKind>());
+        Assert.Equal(
+            new byte[] { 0, 1, 2, 3, 4 },
+            Enum.GetValues<ZoneKind>().Select(kind => (byte)kind));
+        Assert.Equal(0, (byte)ZoneKind.Wall);
+        Assert.Equal(1, (byte)ZoneKind.Hand);
+        Assert.Equal(2, (byte)ZoneKind.Meld);
+        Assert.Equal(3, (byte)ZoneKind.Discard);
+        Assert.Equal(4, (byte)ZoneKind.Revealed);
+        Assert.DoesNotContain("WallTail", Enum.GetNames<ZoneKind>());
     }
 
     [Fact]

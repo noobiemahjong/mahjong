@@ -28,4 +28,4 @@ Status: implemented — zone 保插入序、排序留给展示层；补杠替换
 - ViewModel 负责手牌排序；协议/回放只传槽位与 id，不传展示序。
 - 补杠后手牌折算仍是 3 张（4 张里 1 张视为补张），摸打流程按 `Hand.Count` 记账时必须配合"杠 = 3 折算"的规则（M0.2 胡牌判定读取副露）。
 - `Meld.Tiles` 不能强转 `List` 修改；补杠只能经 `DeclareMeld` 触发。
-- 与 [牌身份 Note](2026-10-29-tile-identity-by-physical-id.md) 相关：槽位去重与移除按物理 `Id`；与 [确定性发牌 Note](2026-10-29-deterministic-deal-and-pcg32.md) 相关：发牌切分点决定牌墙/牌尾的初始槽位序。
+- 与 [牌身份 Note](2026-10-29-tile-identity-by-physical-id.md) 相关：槽位去重与移除按物理 `Id`；与 [确定性发牌 Note](2026-10-29-deterministic-deal-and-pcg32.md) 相关：发牌顺序决定牌墙的初始槽位序。

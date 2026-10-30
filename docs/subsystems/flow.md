@@ -60,14 +60,11 @@
 
 ## 7. 状态哈希
 
-`StateHash.Compute(GameState)` 把模型字段按固定布局编码后取 SHA-256，返回 64 字符小写 hex；整型小端、长度前缀 `u16`、布局版本写在首字节。
-
-> **已知偏差**：`tailCount` 段属于待修正的 `WallTail` 模型；单牌墙由 [M0.2 T-1b](../../docs/milestones/M0.2/T-1b-单牌墙与发牌修正.md) 落地，背景见 [proposed Note](../../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+`StateHash.Compute(GameState)` 把模型字段按固定布局编码后取 SHA-256，返回 64 字符小写 hex；整型小端、长度前缀 `u16`、布局版本 2 写在首字节。
 
 ```
-u8  version = 1
+u8  version = 2
 u16 wallCount + wallCount × u16 tileId        // 槽位顺序，不排序
-u16 tailCount + tailCount × u16 tileId
 u8  playerCount (= 4)
 per seat:
   u8  seat
@@ -82,4 +79,4 @@ u16 roundNo
 ```
 
 - 只哈希模型字段：不含时间、会话、日志、内容清单与规则版本；动作树与请求状态不参与。
-- 先按布局量出字节数再一次性分配写入；`state` 为 null 抛 `ArgumentNullException`；同一实现同输入必得同一 hex，跨实现对齐以本布局为准。
+- 先按布局量出字节数再一次性分配写入；`state` 为 null 抛 `ArgumentNullException`；同一实现同输入必得同一 hex，跨实现对齐以本布局为准；布局背景见 [单牌墙 Note](../../.agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md)。

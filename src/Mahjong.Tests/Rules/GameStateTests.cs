@@ -4,7 +4,7 @@ using Xunit;
 namespace Mahjong.Tests.Rules;
 
 /// <summary>
-/// GameState 契约：四家 + 公共牌墙/牌尾；默认值；CurrentSeat/RoundNo 取值校验；IsWallEmpty 只由 Wall 决定。
+/// GameState 契约：四家 + 单条公共牌墙；默认值；CurrentSeat/RoundNo 取值校验；IsWallEmpty 只由整条 Wall 决定。
 /// </summary>
 public sealed class GameStateTests
 {
@@ -20,9 +20,7 @@ public sealed class GameStateTests
         Assert.True(state.IsWallEmpty);
 
         Assert.Equal(new ZoneId(ZoneId.PublicSeat, ZoneKind.Wall), state.Wall.Id);
-        Assert.Equal(new ZoneId(ZoneId.PublicSeat, ZoneKind.WallTail), state.WallTail.Id);
         Assert.Equal(0, state.Wall.Count);
-        Assert.Equal(0, state.WallTail.Count);
 
         for (int seat = 0; seat < state.Players.Length; seat++)
         {
@@ -82,18 +80,21 @@ public sealed class GameStateTests
     }
 
     [Fact]
-    public void IsWallEmpty_TracksWallOnly()
+    public void IsWallEmpty_TracksWholeWall()
     {
         var state = new GameState();
-
-        state.WallTail.Append(RulesTestData.Physical(0, 0));
         Assert.True(state.IsWallEmpty);
 
         state.Wall.Append(RulesTestData.Physical(1, 0));
         Assert.False(state.IsWallEmpty);
 
+        state.Wall.Append(RulesTestData.Physical(1, 1));
+        Assert.False(state.IsWallEmpty);
+
+        _ = state.DrawFromWall(0);
+        Assert.False(state.IsWallEmpty);
+
         state.Wall.Clear();
         Assert.True(state.IsWallEmpty);
-        Assert.Equal(1, state.WallTail.Count);
     }
 }

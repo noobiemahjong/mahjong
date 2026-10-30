@@ -75,7 +75,7 @@ public static class RulesTestData
     }
 
     /// <summary>
-    /// 全部区域的完整快照：牌墙、牌尾、四家手牌/弃牌/副露（种类、明暗、目标座位、牌 id 序列）。
+    /// 全部区域的完整快照：牌墙、四家手牌/弃牌/副露（种类、明暗、目标座位、牌 id 序列）。
     /// 用于断言同 seed 全槽位一致与失败调用不改状态。
     /// </summary>
     public static string Snapshot(GameState state)
@@ -83,7 +83,6 @@ public static class RulesTestData
         ArgumentNullException.ThrowIfNull(state);
         var builder = new StringBuilder();
         builder.Append("wall=").Append(JoinZone(state.Wall));
-        builder.Append(";tail=").Append(JoinZone(state.WallTail));
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {
             PlayerState player = state.Players[seat];
@@ -109,11 +108,11 @@ public static class RulesTestData
         return builder.ToString();
     }
 
-    /// <summary>该局面上所有区域的物理牌总数（牌墙 + 牌尾 + 手牌 + 弃牌 + 副露）。</summary>
+    /// <summary>该局面上所有区域的物理牌总数（牌墙 + 手牌 + 弃牌 + 副露）。</summary>
     public static int TotalTileCount(GameState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        int total = state.Wall.Count + state.WallTail.Count;
+        int total = state.Wall.Count;
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {
             PlayerState player = state.Players[seat];

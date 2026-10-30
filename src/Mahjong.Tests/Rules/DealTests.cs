@@ -1,11 +1,13 @@
+using System.Reflection;
 using Mahjong.Core.Rules;
 using Xunit;
 
 namespace Mahjong.Tests.Rules;
 
 /// <summary>
-/// Deal 契约：按规格 §3.1 洗牌一次并发牌；固定 seed/bankerSeat 的全槽位由独立 Python 推导的金标断言；
-/// 同 seed 可重复；重置局面（保留 Score/RoundNo）；bankerSeat 越界与 rng 为空拒绝且不改状态。
+/// Deal 契约：按规格 §3.1 洗牌一次，136 张全部按序进牌墙；按 (庄家,+1,+2,+3) mod 4 每座发 13 张，庄家首回合另摸 1 张；
+/// 固定 seed/bankerSeat 的全槽位由独立 Python 推导的金标断言；同 seed 可重复；重置局面（保留 Score/RoundNo）；
+/// bankerSeat 越界与 rng 为空拒绝且不改状态。
 /// </summary>
 public sealed class DealTests
 {
@@ -16,13 +18,27 @@ public sealed class DealTests
 
         state.Deal(new Pcg32(42), 0);
 
-        Assert.Equal(69, state.Wall.Count);
-        Assert.Equal(14, state.WallTail.Count);
-        Assert.Equal(14, state.Players[0].Hand.Count);
+        Assert.Equal(84, state.Wall.Count);
+        Assert.Equal(13, state.Players[0].Hand.Count);
         Assert.Equal(13, state.Players[1].Hand.Count);
         Assert.Equal(13, state.Players[2].Hand.Count);
         Assert.Equal(13, state.Players[3].Hand.Count);
         Assert.Equal(136, RulesTestData.TotalTileCount(state));
+        Assert.False(state.IsWallEmpty);
+    }
+
+    [Fact]
+    public void Deal_LeavesNoReservedTail()
+    {
+        var state = new GameState();
+
+        state.Deal(new Pcg32(42), 0);
+
+        // 单牌墙模型：GameState 没有牌尾属性，ZoneKind 没有 WallTail 成员。
+        Assert.Null(typeof(GameState).GetProperty(
+            "WallTail",
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly));
+        Assert.DoesNotContain("WallTail", Enum.GetNames<ZoneKind>());
     }
 
     [Fact]
@@ -35,7 +51,6 @@ public sealed class DealTests
         AssertGolden(
             state,
             RulesGoldenVectors.DealSeed42Banker0Wall,
-            RulesGoldenVectors.DealSeed42Banker0WallTail,
             [
                 RulesGoldenVectors.DealSeed42Banker0Hand0,
                 RulesGoldenVectors.DealSeed42Banker0Hand1,
@@ -54,7 +69,6 @@ public sealed class DealTests
         AssertGolden(
             state,
             RulesGoldenVectors.DealSeed20261029Banker2Wall,
-            RulesGoldenVectors.DealSeed20261029Banker2WallTail,
             [
                 RulesGoldenVectors.DealSeed20261029Banker2Hand0,
                 RulesGoldenVectors.DealSeed20261029Banker2Hand1,
@@ -74,7 +88,6 @@ public sealed class DealTests
 
         Assert.Equal(RulesTestData.Snapshot(first), RulesTestData.Snapshot(second));
         Assert.Equal(RulesTestData.Ids(first.Wall.Items), RulesTestData.Ids(second.Wall.Items));
-        Assert.Equal(RulesTestData.Ids(first.WallTail.Items), RulesTestData.Ids(second.WallTail.Items));
     }
 
     [Fact]
@@ -97,7 +110,6 @@ public sealed class DealTests
         state.Deal(new Pcg32(42), 0);
 
         ushort[] ids = state.Wall.Items
-            .Concat(state.WallTail.Items)
             .Concat(state.Players.SelectMany(player => player.Hand.Items))
             .Select(tile => tile.Id)
             .ToArray();
@@ -127,9 +139,10 @@ public sealed class DealTests
             {
                 Assert.False(player.IsBanker);
             }
-        }
 
-        Assert.Equal(14, state.Players[2].Hand.Count);
+            // 发牌阶段四家一律 13 张；庄家第 14 张由首回合摸牌产生。
+            Assert.Equal(13, player.Hand.Count);
+        }
     }
 
     [Fact]
@@ -144,7 +157,6 @@ public sealed class DealTests
         state.CurrentSeat = 3;
         state.RoundNo = 5;
         state.Wall.Append(RulesTestData.Physical(3, 0));
-        state.WallTail.Append(RulesTestData.Physical(4, 0));
 
         state.Deal(new Pcg32(42), 2);
 
@@ -182,10 +194,9 @@ public sealed class DealTests
         Assert.Equal(before, RulesTestData.Snapshot(state));
     }
 
-    private static void AssertGolden(GameState state, ushort[] wall, ushort[] wallTail, ushort[][] hands)
+    private static void AssertGolden(GameState state, ushort[] wall, ushort[][] hands)
     {
         Assert.Equal(wall, RulesTestData.Ids(state.Wall.Items));
-        Assert.Equal(wallTail, RulesTestData.Ids(state.WallTail.Items));
 
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {

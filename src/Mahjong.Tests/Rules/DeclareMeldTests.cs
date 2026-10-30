@@ -28,7 +28,6 @@ public sealed class DeclareMeldTests
         Assert.Equal(new ushort[] { 33, 37 }, RulesTestData.Ids(state.Players[1].Discards.Items));
         Assert.Equal(before, RulesTestData.TotalTileCount(state));
         Assert.Equal(0, state.Wall.Count);
-        Assert.Equal(0, state.WallTail.Count);
         Assert.Empty(state.Players[2].Hand.Items);
         Assert.Empty(state.Players[3].Hand.Items);
     }
@@ -435,21 +434,23 @@ public sealed class DeclareMeldTests
     }
 
     [Fact]
-    public void DeclarePong_DoesNotDrawFromWallOrTail()
+    public void DeclarePong_DoesNotDrawFromWall()
     {
         var state = new Board()
             .Hand(0, RulesTestData.Physical(5, 0), RulesTestData.Physical(5, 1))
             .Discards(1, RulesTestData.Physical(5, 2))
             .State;
         state.Wall.Append(RulesTestData.Physical(0, 0));
-        state.WallTail.Append(RulesTestData.Physical(0, 1));
+        state.Wall.Append(RulesTestData.Physical(0, 1));
+        string before = RulesTestData.Snapshot(state);
 
         _ = state.DeclareMeld(0, MeldKind.Pong, [0, 1], 1, 0);
 
-        Assert.Equal(1, state.Wall.Count);
-        Assert.Equal(1, state.WallTail.Count);
+        Assert.Equal(2, state.Wall.Count);
+        Assert.Equal(new ushort[] { 1, 2 }, RulesTestData.Ids(state.Wall.Items));
         Assert.Empty(state.Players[0].Hand.Items);
         Assert.Empty(state.Players[0].Discards.Items);
+        Assert.NotEqual(before, RulesTestData.Snapshot(state));
     }
 
     private static GameState PongReadyBoard() =>

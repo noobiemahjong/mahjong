@@ -4,21 +4,22 @@ using Mahjong.Core.Rules;
 namespace Mahjong.Tests.Flow.Support;
 
 /// <summary>
-/// StateHash 的独立参照实现：严格按 T-5 规格 §3 的字节布局逐字段手工拼字节，
+/// StateHash 的独立参照实现：严格按布局 v2 逐字段手工拼字节
+/// （版本 → 牌墙 → 玩家数 → 四家 → 当前座位 → 局号，无牌尾段），
 /// u16/i32 小端按位移逐字节写出，不使用生产代码的写字节逻辑，也不引用
 /// <c>Mahjong.Core.Flow.StateHash</c>，因此可作为金标的独立第二实现。
 /// </summary>
 internal static class StateHashOracle
 {
-    /// <summary>规格 §3 的字节布局版本号。</summary>
-    public const byte LayoutVersion = 1;
+    /// <summary>布局版本号（单牌墙，无牌尾段）。</summary>
+    public const byte LayoutVersion = 2;
 
     /// <summary>玩家数固定为 4（u8）。</summary>
     private const byte ExpectedPlayerCount = 4;
 
-    /// <summary>按规格 §3 手工构造期望字节序列。</summary>
+    /// <summary>按布局 v2 手工构造期望字节序列。</summary>
     /// <param name="state">要编码的局面。</param>
-    /// <returns>规格 §3 的字节流。</returns>
+    /// <returns>布局 v2 的字节流。</returns>
     public static byte[] BuildExpectedBytes(GameState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -27,7 +28,6 @@ internal static class StateHashOracle
         bytes.Add(LayoutVersion);
 
         AddCountedIds(bytes, state.Wall.Items);
-        AddCountedIds(bytes, state.WallTail.Items);
 
         bytes.Add(ExpectedPlayerCount);
         for (int seat = 0; seat < ExpectedPlayerCount; seat++)
@@ -70,7 +70,7 @@ internal static class StateHashOracle
         return bytes.ToArray();
     }
 
-    /// <summary>按规格 §3 计算期望的小写十六进制 SHA-256。</summary>
+    /// <summary>按布局 v2 计算期望的小写十六进制 SHA-256。</summary>
     /// <param name="state">要编码的局面。</param>
     /// <returns>64 字符小写 hex。</returns>
     public static string ComputeExpectedHex(GameState state) =>

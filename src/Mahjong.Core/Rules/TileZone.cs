@@ -5,23 +5,20 @@ namespace Mahjong.Core.Rules;
 /// <summary>区域种类。数值是协议与回放编码的一部分，已发布后不得改动。</summary>
 public enum ZoneKind : byte
 {
-    /// <summary>牌墙头部：正常摸牌从头部取。</summary>
+    /// <summary>牌墙：正常摸牌从头部取，杠补牌从末尾取。</summary>
     Wall = 0,
 
-    /// <summary>牌墙尾部：杠补牌从尾部取。</summary>
-    WallTail = 1,
-
     /// <summary>手牌。</summary>
-    Hand = 2,
+    Hand = 1,
 
     /// <summary>副露。</summary>
-    Meld = 3,
+    Meld = 2,
 
     /// <summary>弃牌区。</summary>
-    Discard = 4,
+    Discard = 3,
 
     /// <summary>规则性揭示的牌。</summary>
-    Revealed = 5,
+    Revealed = 4,
 }
 
 /// <summary>区域标识：座位 + 区域种类；<see cref="PublicSeat"/> 表示不属于任何座位的公共区。</summary>
@@ -29,7 +26,7 @@ public enum ZoneKind : byte
 /// <param name="Kind">区域种类。</param>
 public readonly record struct ZoneId(byte Seat, ZoneKind Kind)
 {
-    /// <summary>公共区座位值（牌墙、牌尾等不属于任何座位）。</summary>
+    /// <summary>公共区座位值（牌墙不属于任何座位）。</summary>
     public const byte PublicSeat = 255;
 }
 

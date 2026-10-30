@@ -145,9 +145,8 @@ public sealed class RequestGroup
 `Mahjong.Core.Flow.StateHash.Compute(GameState)` → SHA-256 小写 hex。字节布局（整型小端，长度前缀 `u16`）：
 
 ````
-u8  version = 1
+u8  version = 2
 u16 wallCount + wallCount × u16 tileId        // 按槽位顺序
-u16 tailCount + tailCount × u16 tileId
 u8  playerCount (=4)
 per seat:
   u8  seat

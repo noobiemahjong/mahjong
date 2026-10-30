@@ -35,7 +35,7 @@
 
 ## 3. 牌与区域模型
 
-- `SuitType`、`ZoneKind`、`MeldKind` 都是 `byte` 枚举，取值 1–5、0–5、1–4，这些数值参与内容、协议与回放编码。
+- `SuitType`、`ZoneKind`、`MeldKind` 都是 `byte` 枚举，取值 1–5、0–4、1–4，这些数值参与内容、协议与回放编码。
 - `TileType(ushort Id, SuitType Suit, byte Rank)`：`Id` 是 `tiles.json` 的 0–33，`Rank` 从 1 起；相等性与 `GetHashCode` 只比 `Id`。
 - `Tile(ushort Id, TileType Type)`：物理 id 1–136，等于 `typeId*4+copy+1`；`UnknownId` 是 0，模型内的牌不用 0；相等性只比 `Id`。
 - `Suit` 与 `Skill` 分别来自 `suits.json`/`skills.json`；`JokerRule(Mode, Type?)` 在 `FixedType` 时 `Type` 非空、`None` 时为空。
@@ -43,9 +43,8 @@
 - `TileZone(ZoneId id, int capacity = 0)` 只允许尾部 `Append`、按槽位 `RemoveAt`，没有插入与排序 API；`capacity` 只是初始容量提示（负数抛 `ArgumentOutOfRangeException`），不是上限。`Append` 遇到区域内已存在的物理 id、索引器与 `RemoveAt` 越界都抛 `InvalidOperationException` 且区域不变；`Remove` 找不到返回 false、`IndexOf` 找不到返回 -1；`Items` 是不复制的实时只读视图；非线程安全。
 - `Meld(kind, tiles, opened, targetSeat)`：碰 3 张、三种杠 4 张；所有牌 `Type.Id` 相同、物理 id 互不相同；`targetSeat` 是 0–3 或 `Meld.NoTargetSeat`（255）；`opened` 与 `kind` 不做交叉校验；构造时复制传入集合，`Tiles` 是实时只读视图；`Kind` 只由碰原地升级为 `KongSupplement`。
 - `PlayerState(byte seat)`：`Hand`、`Discards`、`Melds`（`List<Meld>`，按声明顺序追加）、`Score`（short）、`IsBanker`。
-- `GameState`：4 名玩家、物理牌 136 张。`Deal(rng, bankerSeat)` 用 Fisher-Yates 洗 1–136，末 14 张进 `WallTail`、其余 122 张进 `Wall`，按 `(bankerSeat,+1,+2,+3) mod 4` 各发 13 张、庄家再摸 1 张，发牌后剩 `Wall` 69 张 / `WallTail` 14 张；同 seed 同 `bankerSeat` 得同一全槽位；`rng` 为 null 抛 `ArgumentNullException`，`bankerSeat` 大于 3 抛 `ArgumentOutOfRangeException`。
-- `DrawFromWall(seat)` 从 `Wall` 头部、`DrawFromTail(seat)` 从 `WallTail` 末端取牌并追加到该座位手牌尾部；空墙/空牌尾抛 `InvalidOperationException`。`IsWallEmpty` 只看 `Wall`。
-- **已知偏差**：`WallTail` 是待修正模型；目标为单牌墙（正常摸头、杠补墙尾、无预留），由 [M0.2 T-1b](../../docs/milestones/M0.2/T-1b-单牌墙与发牌修正.md) 落地，背景见 [proposed Note](../../.agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+- `GameState`：4 名玩家、物理牌 136 张。`Deal(rng, bankerSeat)` 用 Fisher-Yates 洗 1–136 全部进 `Wall`，按 `(bankerSeat,+1,+2,+3) mod 4` 各发 13 张、发牌时不替庄家摸第 14 张，发牌后 `Wall` 84 张、四家各 13 张，`CurrentSeat = bankerSeat` 且只有庄家 `IsBanker`；同 seed 同 `bankerSeat` 得同一全槽位；`rng` 为 null 抛 `ArgumentNullException`，`bankerSeat` 大于 3 抛 `ArgumentOutOfRangeException`。
+- `DrawFromWall(seat)` 从 `Wall` 头部、`DrawFromTail(seat)` 从 `Wall` 末尾取牌并追加到该座位手牌尾部；`Wall` 空抛 `InvalidOperationException`。`IsWallEmpty` 看整条 `Wall`；单牌墙口径的背景见 [单牌墙 Note](../../.agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
 - `Discard(seat, handSlot)` 把手牌槽位的牌移到弃牌区尾部，槽位越界抛 `InvalidOperationException`；`CurrentSeat` setter 取 0–3、`RoundNo` setter 取 1–8，越界抛 `ArgumentOutOfRangeException`。
 - `DeclareMeld(seat, kind, handSlots, targetSeat, targetDiscardSlot = null)`：手牌槽数碰 2、明杠 3、暗杠 4、补杠 1 且互不重复；碰与明杠要求 `targetSeat` 在 0–3、不等于声明座位、`targetDiscardSlot` 非空，暗杠与补杠要求 255 且 null；校验先于状态修改，失败时状态不变；返回新建副露，补杠返回被原地升级的既有碰；副露本身不摸牌。
 

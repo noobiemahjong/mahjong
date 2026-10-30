@@ -1,7 +1,7 @@
 namespace Mahjong.Core.Rules;
 
 /// <summary>
-/// 一局对局的权威模型：牌墙、牌尾、四名玩家、当前座位与局号。
+/// 一局对局的权威模型：牌墙、四名玩家、当前座位与局号。
 /// 只承载规则层的状态转换（发牌、摸打、副露），不读时钟、不做 IO；实例非线程安全。
 /// </summary>
 public sealed class GameState
@@ -9,16 +9,13 @@ public sealed class GameState
     /// <summary>玩家座位数，固定 4。</summary>
     public const byte PlayerCount = 4;
 
-    /// <summary>物理牌总数（34 种 × 4 张）。</summary>
+    /// <summary>物理牌总数（34 种 × 4 张）；洗牌后全部进牌墙。</summary>
     private const int TotalTiles = 136;
 
-    /// <summary>洗牌后牌墙的张数；洗牌结果的末 14 张留给牌尾。</summary>
-    private const int WallCapacity = 122;
+    /// <summary>牌墙初始容量提示，等于物理牌总数。</summary>
+    private const int WallCapacity = TotalTiles;
 
-    /// <summary>牌尾张数，只用于杠补。</summary>
-    private const int WallTailCapacity = 14;
-
-    /// <summary>每局起手张数；庄家另多摸 1 张。</summary>
+    /// <summary>每局起手张数；庄家首回合另摸 1 张。</summary>
     private const int InitialHandSize = 13;
 
     private const byte MinRoundNo = 1;
@@ -27,11 +24,10 @@ public sealed class GameState
     private byte _currentSeat;
     private byte _roundNo = MinRoundNo;
 
-    /// <summary>创建空局：4 名玩家，牌墙与牌尾为空，当前座位 0，局号 1。</summary>
+    /// <summary>创建空局：4 名玩家，牌墙为空，当前座位 0，局号 1。</summary>
     public GameState()
     {
         Wall = new TileZone(new ZoneId(ZoneId.PublicSeat, ZoneKind.Wall), WallCapacity);
-        WallTail = new TileZone(new ZoneId(ZoneId.PublicSeat, ZoneKind.WallTail), WallTailCapacity);
         Players = new PlayerState[PlayerCount];
         for (byte seat = 0; seat < PlayerCount; seat++)
         {
@@ -42,11 +38,8 @@ public sealed class GameState
         RoundNo = MinRoundNo;
     }
 
-    /// <summary>牌墙：正常摸牌从头部取。</summary>
+    /// <summary>牌墙：正常摸牌从头部取，杠补牌从末尾取。</summary>
     public TileZone Wall { get; }
-
-    /// <summary>牌尾：杠补牌从尾部取。</summary>
-    public TileZone WallTail { get; }
 
     /// <summary>四名玩家，下标即座位号。</summary>
     public PlayerState[] Players { get; }
@@ -89,12 +82,12 @@ public sealed class GameState
         }
     }
 
-    /// <summary>牌墙是否为空。流局判据只看牌墙，牌尾允许有余额。</summary>
+    /// <summary>牌墙是否为空。流局判据为整条牌墙为空。</summary>
     public bool IsWallEmpty => Wall.Count == 0;
 
     /// <summary>
-    /// 按规格 §3.1 的确定性顺序发牌：重置牌墙、牌尾、四家手牌/副露/弃牌与庄家标记（不动分数与局号），
-    /// 用 Fisher-Yates 洗出 1–136 的排列，末 14 张进牌尾、其余进牌墙，再按 (庄家,+1,+2,+3) mod 4 发牌。
+    /// 按规格 §3.1 的确定性顺序发牌：重置牌墙、四家手牌/副露/弃牌与庄家标记（不动分数与局号），
+    /// 用 Fisher-Yates 洗出 1–136 的排列并全部按序进牌墙，再按 (庄家,+1,+2,+3) mod 4 每座发 13 张。
     /// 可重复调用；同 seed 与同 bankerSeat 必得同一全槽位。
     /// </summary>
     /// <param name="rng">随机源；同一种子的同一实现得到同一排列。</param>
@@ -113,7 +106,6 @@ public sealed class GameState
         }
 
         Wall.Clear();
-        WallTail.Clear();
         foreach (PlayerState player in Players)
         {
             player.Hand.Clear();
@@ -134,12 +126,7 @@ public sealed class GameState
             (order[index], order[swapIndex]) = (order[swapIndex], order[index]);
         }
 
-        for (int index = WallCapacity; index < TotalTiles; index++)
-        {
-            WallTail.Append(CreateTile(order[index]));
-        }
-
-        for (int index = 0; index < WallCapacity; index++)
+        for (int index = 0; index < TotalTiles; index++)
         {
             Wall.Append(CreateTile(order[index]));
         }
@@ -153,8 +140,6 @@ public sealed class GameState
                 DrawFromWall(seat);
             }
         }
-
-        DrawFromWall(bankerSeat);
 
         Players[bankerSeat].IsBanker = true;
         CurrentSeat = bankerSeat;
@@ -178,20 +163,20 @@ public sealed class GameState
         return tile;
     }
 
-    /// <summary>从牌尾末端摸一张牌（杠补）并追加到该座位手牌。</summary>
+    /// <summary>从牌墙末尾摸一张牌（杠补）并追加到该座位手牌。</summary>
     /// <param name="seat">座位 0–3。</param>
     /// <returns>摸到的牌。</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="seat"/> 不在 0–3。</exception>
-    /// <exception cref="InvalidOperationException">牌尾为空；失败时状态不变。</exception>
+    /// <exception cref="InvalidOperationException">牌墙为空；失败时状态不变。</exception>
     public Tile DrawFromTail(byte seat)
     {
         PlayerState player = GetPlayer(seat);
-        if (WallTail.Count == 0)
+        if (Wall.Count == 0)
         {
-            throw new InvalidOperationException("The wall tail is empty; no tile can be drawn.");
+            throw new InvalidOperationException("The wall is empty; no tile can be drawn.");
         }
 
-        Tile tile = WallTail.RemoveAt(WallTail.Count - 1);
+        Tile tile = Wall.RemoveAt(Wall.Count - 1);
         player.Hand.Append(tile);
         return tile;
     }

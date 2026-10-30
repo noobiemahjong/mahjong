@@ -1,9 +1,10 @@
-// T-4 金标字面量：由按规格独立实现的 Python 脚本推导（未入库）；测试只做字面量比对。
+// T-1b 金标字面量：由按规格独立实现的 Python 脚本推导（未入库）；测试只做字面量比对。
 namespace Mahjong.Tests.Rules;
 
 /// <summary>
-/// T-4 金标向量：PCG32 参考序列与发牌全槽位。
+/// T-1b 金标向量：PCG32 参考序列与单牌墙发牌全槽位。
 /// 数值由按规格 §3.1 与 contract 的 PCG32 定义独立实现的 Python 脚本推导，测试只做字面量比对。
+/// 发牌后牌墙 84 槽、四家各 13 张；不存在牌尾区。
 /// </summary>
 public static class RulesGoldenVectors
 {
@@ -16,29 +17,23 @@ public static class RulesGoldenVectors
     /// <summary>Pcg32(seed: 42, stream: 1) 的前 4 个 NextUInt()。</summary>
     public static readonly uint[] Pcg32Seed42Stream1 = [1307692281u, 3850602322u, 1491967504u, 4091771729u];
 
-    /// <summary>Deal(seed: 42, stream: 1, bankerSeat: 0) 后 Wall 剩余 69 槽，按槽位顺序。</summary>
+    /// <summary>Deal(seed: 42, stream: 1, bankerSeat: 0) 后 Wall 的 84 槽，按槽位顺序。</summary>
     public static readonly ushort[] DealSeed42Banker0Wall =
     [
-        44, 104, 91, 129, 131, 4, 42, 96, 64, 99, 134, 90,
-        102, 57, 112, 33, 2, 122, 49, 82, 114, 3, 47, 89,
-        25, 48, 62, 72, 125, 39, 53, 86, 111, 85, 120, 9,
-        132, 59, 45, 105, 46, 51, 110, 35, 36, 41, 21, 71,
-        14, 118, 7, 16, 76, 101, 95, 54, 126, 50, 94, 69,
-        28, 40, 84, 107, 32, 63, 98, 74, 55,
-    ];
-
-    /// <summary>Deal(seed: 42, stream: 1, bankerSeat: 0) 的 WallTail 14 槽，按槽位顺序。</summary>
-    public static readonly ushort[] DealSeed42Banker0WallTail =
-    [
-        56, 124, 81, 19, 65, 88, 61, 31, 78, 37, 130, 115,
-        23, 58,
+        11, 44, 104, 91, 129, 131, 4, 42, 96, 64, 99, 134,
+        90, 102, 57, 112, 33, 2, 122, 49, 82, 114, 3, 47,
+        89, 25, 48, 62, 72, 125, 39, 53, 86, 111, 85, 120,
+        9, 132, 59, 45, 105, 46, 51, 110, 35, 36, 41, 21,
+        71, 14, 118, 7, 16, 76, 101, 95, 54, 126, 50, 94,
+        69, 28, 40, 84, 107, 32, 63, 98, 74, 55, 56, 124,
+        81, 19, 65, 88, 61, 31, 78, 37, 130, 115, 23, 58,
     ];
 
     /// <summary>Deal(seed: 42, stream: 1, bankerSeat: 0) 后座位 0 的手牌，按槽位顺序。</summary>
     public static readonly ushort[] DealSeed42Banker0Hand0 =
     [
         75, 119, 73, 92, 15, 29, 52, 83, 109, 123, 60, 127,
-        26, 11,
+        26,
     ];
 
     /// <summary>Deal(seed: 42, stream: 1, bankerSeat: 0) 后座位 1 的手牌，按槽位顺序。</summary>
@@ -62,22 +57,16 @@ public static class RulesGoldenVectors
         22,
     ];
 
-    /// <summary>Deal(seed: 20261029, stream: 1, bankerSeat: 2) 后 Wall 剩余 69 槽，按槽位顺序。</summary>
+    /// <summary>Deal(seed: 20261029, stream: 1, bankerSeat: 2) 后 Wall 的 84 槽，按槽位顺序。</summary>
     public static readonly ushort[] DealSeed20261029Banker2Wall =
     [
-        1, 113, 12, 53, 114, 9, 118, 20, 89, 107, 55, 45,
-        121, 72, 32, 19, 110, 58, 124, 111, 96, 103, 37, 52,
-        73, 25, 91, 133, 47, 75, 65, 29, 127, 93, 2, 64,
-        126, 122, 132, 131, 16, 85, 22, 21, 4, 40, 44, 66,
-        86, 104, 108, 7, 99, 70, 60, 33, 67, 134, 34, 56,
-        123, 83, 62, 106, 13, 69, 8, 120, 100,
-    ];
-
-    /// <summary>Deal(seed: 20261029, stream: 1, bankerSeat: 2) 的 WallTail 14 槽，按槽位顺序。</summary>
-    public static readonly ushort[] DealSeed20261029Banker2WallTail =
-    [
-        130, 88, 71, 61, 35, 102, 77, 49, 68, 15, 3, 94,
-        46, 80,
+        51, 1, 113, 12, 53, 114, 9, 118, 20, 89, 107, 55,
+        45, 121, 72, 32, 19, 110, 58, 124, 111, 96, 103, 37,
+        52, 73, 25, 91, 133, 47, 75, 65, 29, 127, 93, 2,
+        64, 126, 122, 132, 131, 16, 85, 22, 21, 4, 40, 44,
+        66, 86, 104, 108, 7, 99, 70, 60, 33, 67, 134, 34,
+        56, 123, 83, 62, 106, 13, 69, 8, 120, 100, 130, 88,
+        71, 61, 35, 102, 77, 49, 68, 15, 3, 94, 46, 80,
     ];
 
     /// <summary>Deal(seed: 20261029, stream: 1, bankerSeat: 2) 后座位 0 的手牌，按槽位顺序。</summary>
@@ -98,7 +87,7 @@ public static class RulesGoldenVectors
     public static readonly ushort[] DealSeed20261029Banker2Hand2 =
     [
         117, 30, 39, 81, 5, 74, 59, 82, 27, 26, 17, 116,
-        95, 51,
+        95,
     ];
 
     /// <summary>Deal(seed: 20261029, stream: 1, bankerSeat: 2) 后座位 3 的手牌，按槽位顺序。</summary>

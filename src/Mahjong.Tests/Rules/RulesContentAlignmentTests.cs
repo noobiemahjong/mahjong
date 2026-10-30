@@ -86,7 +86,6 @@ public sealed class RulesContentAlignmentTests
 
     private static Tile[] CollectTiles(GameState state) =>
         state.Wall.Items
-            .Concat(state.WallTail.Items)
             .Concat(state.Players.SelectMany(player => player.Hand.Items))
             .ToArray();
 }

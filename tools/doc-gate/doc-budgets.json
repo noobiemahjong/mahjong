@@ -62,6 +62,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md",
       "limitBytes": 8192
     },
@@ -119,10 +123,6 @@
     },
     {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
-      "limitBytes": 8192
-    },
-    {
-      "path": ".agents/notes/proposed/architecture/2026-10-30-single-wall-no-reserved-tail.md",
       "limitBytes": 8192
     },
     {

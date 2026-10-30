@@ -7,18 +7,19 @@ using Xunit;
 namespace Mahjong.Tests.Flow;
 
 /// <summary>
-/// StateHash 契约：SHA-256 小写 hex；默认空局与含牌墙/牌尾/副露（碰 + 补杠 + opened:false 暗杠）/弃牌/分数的局面各有字面金标；
-/// 期望字节由测试内独立按规格 §3 手工拼出（<see cref="StateHashOracle"/>），不使用生产代码的写字节逻辑。
+/// StateHash 契约：SHA-256 小写 hex；布局版本 2（单牌墙，无牌尾段）；
+/// 默认空局与含牌墙/副露（碰 + 补杠 + opened:false 暗杠）/弃牌/分数的局面各有字面金标；
+/// 期望字节由测试内独立按布局规格手工拼出（<see cref="StateHashOracle"/>），不使用生产代码的写字节逻辑。
 /// </summary>
 public sealed class StateHashTests
 {
-    /// <summary>默认空 GameState 的 SHA-256 金标（规格 §3 字节流：version 1、全零计数、currentSeat 0、roundNo 1）。</summary>
+    /// <summary>默认空 GameState 的 SHA-256 金标（布局 v2：version 2、空牌墙、全零计数、currentSeat 0、roundNo 1）。</summary>
     private const string EmptyStateHashHex =
-        "e5e8bfb7d63dc88daa52fc62f0e0a4a9cdc1de3230619660fffd4230bdea36be";
+        "9233ee2f05f8fb737c69c9d271c7ad741cf3e708eef1cc17931597a31e847b6b";
 
-    /// <summary>含牌墙/牌尾/副露（碰、补杠、opened:false 暗杠）/弃牌/分数的局面金标。</summary>
+    /// <summary>含牌墙/副露（碰、补杠、opened:false 暗杠）/弃牌/分数的局面金标。</summary>
     private const string RichStateHashHex =
-        "3778b852dafc7fd4f44ca5673fea7312345f9d00578430c78406b9d60af2beb8";
+        "fc85d25e85af156153c4afab3da475e1f186a31310078bec7131eaddd623edc2";
 
     [Fact]
     public void Compute_RejectsNullState()
@@ -46,6 +47,21 @@ public sealed class StateHashTests
 
         Assert.Equal(EmptyStateHashHex, StateHashOracle.ComputeExpectedHex(state));
         Assert.Equal(StateHashOracle.ComputeExpectedHex(state), StateHash.Compute(state));
+    }
+
+    [Fact]
+    public void Layout_UsesVersion2AndHasNoWallTailSegment()
+    {
+        byte[] empty = StateHashOracle.BuildExpectedBytes(new GameState());
+
+        Assert.Equal(2, StateHashOracle.LayoutVersion);
+        Assert.Equal(2, empty[0]);
+
+        // 空局字节数：version 1 + 牌墙 2 + 玩家数 1 + 四家 × 11 + currentSeat 1 + roundNo 2 = 51，无牌尾段。
+        Assert.Equal(51, empty.Length);
+
+        // 含牌墙 3 张与三副露的富局面：111 字节，同样无牌尾段。
+        Assert.Equal(111, StateHashOracle.BuildExpectedBytes(CreateRichState()).Length);
     }
 
     [Fact]
@@ -79,6 +95,18 @@ public sealed class StateHashTests
     }
 
     [Fact]
+    public void Compute_SameDealOnTwoStates_HashesEqual()
+    {
+        var first = new GameState();
+        first.Deal(new Pcg32(42), 0);
+        var second = new GameState();
+        second.Deal(new Pcg32(42), 0);
+
+        Assert.Equal(StateHash.Compute(first), StateHash.Compute(second));
+        Assert.Equal(StateHashOracle.ComputeExpectedHex(first), StateHash.Compute(first));
+    }
+
+    [Fact]
     public void Compute_WallSlotOrderIsSignificant()
     {
         var ascending = new GameState();
@@ -97,7 +125,7 @@ public sealed class StateHashTests
     }
 
     /// <summary>
-    /// 构造覆盖全部字节段的局面：牌墙 3 张、牌尾 2 张、座位 0 庄家且分数为负、手牌 4 张、
+    /// 构造覆盖全部字节段的局面：牌墙 3 张、座位 0 庄家且分数为负、手牌 4 张、
     /// 三副露（碰 opened/有目标座位、补杠 opened/无目标座位、暗杠 opened:false/无目标座位）、弃牌 2 张；
     /// 其余座位分别在手牌/弃牌/分数/空局面上取值；currentSeat 3、roundNo 5。
     /// </summary>
@@ -107,11 +135,6 @@ public sealed class StateHashTests
         foreach (int physicalId in new[] { 101, 102, 103 })
         {
             state.Wall.Append(RulesTestData.FromId(physicalId));
-        }
-
-        foreach (int physicalId in new[] { 104, 105 })
-        {
-            state.WallTail.Append(RulesTestData.FromId(physicalId));
         }
 
         PlayerState seat0 = state.Players[0];

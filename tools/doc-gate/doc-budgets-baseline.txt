@@ -17,6 +17,7 @@
 .agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md	8192
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
+.agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md	8192
 .agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md	8192
 .agents/notes/implemented/process/2026-10-28-governance-and-doc-tiers.md	8192
 .agents/notes/implemented/process/2026-10-29-aot-smoke-tool.md	8192
@@ -94,6 +95,7 @@ docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240
 docs/subsystems/core.md	10240
 docs/subsystems/flow.md	10240
+docs/subsystems/scoring.md	10240
 src/AGENTS.md	4096
 tools/AGENTS.md	4096
 tools/aot-smoke/README.md	4096

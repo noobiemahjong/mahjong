@@ -78,6 +78,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md",
       "limitBytes": 8192
     },
@@ -383,6 +387,10 @@
     },
     {
       "path": "docs/subsystems/flow.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/subsystems/scoring.md",
       "limitBytes": 10240
     },
     {

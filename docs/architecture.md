@@ -1,12 +1,12 @@
 # Architecture（当前实现地图）
 
-> 读代码前先读本页：组成、tick 循环、seam、扩展点。类型与契约见 [subsystems/core.md](subsystems/core.md) 与 [subsystems/flow.md](subsystems/flow.md)；为什么这么定见 [.agents/notes/](../.agents/notes/README.md)；目标设计见 [DESIGN.md](DESIGN.md)。
+> 读代码前先读本页：组成、tick 循环、seam、扩展点。类型与契约见 [subsystems/core.md](subsystems/core.md)、[subsystems/flow.md](subsystems/flow.md) 与 [subsystems/scoring.md](subsystems/scoring.md)；为什么这么定见 [.agents/notes/](../.agents/notes/README.md)；目标设计见 [DESIGN.md](DESIGN.md)。
 
 ## 组成
 
 | 工程 | 内容 | 依赖 |
 |---|---|---|
-| `Mahjong.Core` | `Rules`（牌/区域/局面/随机/技能与校验器）、`Flow`（动作树/调度/命令/请求/响应窗口/哈希）、`Content`（内容加载/查表）、`CoreAssembly` 身份锚点 | 无工程与包引用；`IsAotCompatible`，不引用 Godot/网络/时钟 |
+| `Mahjong.Core` | `Rules`（牌/区域/局面/随机/技能与校验器/计分与轮次）、`Flow`（动作树/调度/命令/请求/响应窗口/哈希）、`Content`（内容加载/查表）、`CoreAssembly` 身份锚点 | 无工程与包引用；`IsAotCompatible`，不引用 Godot/网络/时钟 |
 | `Mahjong.Session` | 只有 `Mahjong.Session.csproj`，不含类型 | Core |
 | `Mahjong.Client` | Godot 4.7.2 宿主；场景根节点 `Startup`（`Node`）：普通启动打印 `M0.1 START`；`--smoke` 加载内容与查表、打印 `CONTENT OK <hash>` 与 `TABLES OK ...`，30 帧后退出 | Core、Session；`PublishAot`，root 为 Client/Session/Core/GodotSharp |
 | `Mahjong.Server` | 控制台入口 `Program.Main`：打印 `M0.1 SERVER OK` 后返回 0 | Core、Session |
@@ -27,6 +27,8 @@
 事件侧只有 `GameEventArgs`（`GameState` + 可选 `Payload`）与抽象基类 `Trigger`，没有触发器注册表或事件派发器。
 
 弃牌响应在调度器之外：`ResponseWindow` 向最多 3 个候选座位开窗、收应答并按固定仲裁键产出 `RequestOutcome`，调度器的 `WaitRequest` 只等调用方把结算写进 `IRequestRegistry`。
+
+轮次驱动 `RoundController` 在没有会话时跑完 8 局：`Deal` 后庄家摸第 14 张，按 `RoundCommand` 脚本出牌或自摸，结算走 `ScoreManager` 的暂存→`Release` 两段式（流局回滚净 0），每局把权威总分写回 `PlayerState.Score` 镜像并轮换庄家；`RoundResult` 是 T-5 结算事件的 payload 来源。
 
 启动路径不驱动 tick：`Mahjong.Server` 的 `Main` 打印后返回；客户端 `Startup` 是场景根节点：`--smoke` 下加载内容与查表并打印标记，计数 30 帧后退出。`Mahjong.Session` 不含装配代码，调度器、命令队列与内容加载在 Core 里可直接构造。
 
@@ -52,5 +54,6 @@
 
 - [core.md](subsystems/core.md)：内容加载、查表、牌与区域模型、随机与展示排序、技能与校验器。
 - [flow.md](subsystems/flow.md)：Action 树、调度器、命令与请求、响应窗口、状态哈希。
+- [scoring.md](subsystems/scoring.md)：计分账本与番种/杠位、轮次驱动、单局结果与排名。
 
 确定性、并发、AOT 与序列化口径见 [src/AGENTS.md](../src/AGENTS.md)；文档 tier 与门禁见 [docs/AGENTS.md](AGENTS.md)。

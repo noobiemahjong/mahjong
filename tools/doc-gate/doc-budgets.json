@@ -62,6 +62,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md",
       "limitBytes": 8192
     },

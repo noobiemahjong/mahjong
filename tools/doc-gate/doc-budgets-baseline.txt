@@ -13,6 +13,7 @@
 .agents/notes/implemented/architecture/2026-10-29-state-hash-byte-layout.md	8192
 .agents/notes/implemented/architecture/2026-10-29-tile-identity-by-physical-id.md	8192
 .agents/notes/implemented/architecture/2026-10-29-zone-append-only-and-meld-upgrade.md	8192
+.agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md	8192
 .agents/notes/implemented/process/2026-10-28-governance-and-doc-tiers.md	8192

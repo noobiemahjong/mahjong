@@ -40,6 +40,7 @@
 12. **一任务一 commit，不 push**；做完停下汇报，等确认再下一个。→ [development](docs/development.md)
 13. **旧 Unity 项目不作基线**：不追求行为等价、不登记旧版差异、不记录代码出处。→ [legacy](docs/legacy/README.md)
 14. **不删必填内容换绿灯**：判据、链接、登记行、决策记录、编号只增不减。→ [docs/AGENTS.md](docs/AGENTS.md)
+15. **变异台账只在用户安排的批次统一跑**：常规任务（含对抗审核）不执行变异矩阵，只把待跑条目登记进 [变异台账](docs/reference/mutation-ledger.md)；汇报写「已登记、未跑」。→ [development](docs/development.md)
 
 ## 红线
 

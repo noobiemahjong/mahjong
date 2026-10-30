@@ -12,6 +12,7 @@
 | 查表二进制 | `content/tables/` | v1 唯一事实来源；sha256 待写入 manifest |
 | GameEventEngine | [game-event-engine.md](game-event-engine.md) | tick/Action 树原型：可借鉴与不要照搬的清单 |
 | Godot AOT 取证 | [godot-aot.md](godot-aot.md) | 4.7.2 NativeAOT 配方、导出命令、裁剪坑 |
+| 变异台账 | [mutation-ledger.md](mutation-ledger.md) | 常规任务只登记待跑变异；用户批次执行后回填结果 |
 | SGS 参考实现 | `E:/learn/sgs/` | TCP + protobuf + 录播/观战/重连的历史实现；只作结构参考 |
 | 上游算法仓库 | `https://github.com/gaodayihao/majiang_algorithm` | MIT；当前 data 与我们的表语义不同（见 TABLES §4） |
 | 旧项目资料 | [../legacy/](../legacy/README.md) | 历史资料/素材参考，非权威 |

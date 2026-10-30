@@ -27,6 +27,7 @@
 .agents/notes/implemented/process/2026-10-29-nuget-source-pinning.md	8192
 .agents/notes/implemented/process/2026-10-30-dealer-rule-and-rule-variant-scope.md	8192
 .agents/notes/implemented/process/2026-10-30-m4-art-and-release-acceptance.md	8192
+.agents/notes/implemented/process/2026-10-30-mutation-ledger-user-batched.md	8192
 .agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md	8192
 .agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md	8192
 .agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md	8192
@@ -87,6 +88,7 @@ docs/postmortem/README.md	4096
 docs/reference/README.md	4096
 docs/reference/game-event-engine.md	8192
 docs/reference/godot-aot.md	8192
+docs/reference/mutation-ledger.md	8192
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240

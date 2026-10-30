@@ -118,6 +118,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-30-mutation-ledger-user-batched.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/process/2026-10-30-project-csharp-mcp.md",
       "limitBytes": 8192
     },
@@ -355,6 +359,10 @@
     },
     {
       "path": "docs/reference/godot-aot.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/reference/mutation-ledger.md",
       "limitBytes": 8192
     },
     {

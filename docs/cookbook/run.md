@@ -22,22 +22,24 @@ Godot 标准版（非 mono）跑不了 C# 工程；缺 .NET 版时先装，编�
 
 1. FileSystem 面板双击 `res://Startup.tscn`：工程主场景，`application/run/main_scene` 已指向它，根节点 `Startup` 挂 `Startup.cs`。
 2. 按 F5（Run Project）或点右上角 ▶。
-3. 期望 Output 打印 `M0.1 START`，随后自动切到 `res://LocalGame.tscn`：1280×720 牌桌，Info 显示局号/剩余牌数/分数与状态行，四家区域、自己手牌与 Actions 按钮可见。
-4. 停止：F8 或工具栏停止按钮；对局中也可点 `BACK` 退出进程。
+3. 期望 Output 打印 `M0.1 START`，随后自动切到 `res://LocalGame.tscn`：1280×720 中文牌桌，Info 首行 `第 n/8 局  余牌 w  你 score`、第二行状态提示，四家区域、自己手牌与 Actions 按钮（出牌/碰/杠/胡/过）可见。
+4. 停止：F8 或工具栏停止按钮；对局中也可点 `返回` 退出进程。
+5. 中文由 `SystemFont` 运行时回退渲染，依赖操作系统 CJK 字体；随包终版字体归 M4。
 
 ## 3. 本地对局操作
 
-1. 轮到自己且状态行为 `YOUR TURN - SELECT A TILE` 时点手牌选中（黄色边框），再点同一张或点 `DISCARD` 出牌。
-2. 出现可点的 `PONG/KONG/WIN/PASS` 时点对应按钮；禁用按钮不可点；响应窗口状态行为 `RESPONSE WINDOW - ...`。
-3. 一局结束弹 `ROUND n RESULT`：`CONTINUE` 继续，`RESTART` 用新 seed 重开，`BACK` 退出。
-4. 8 局结束弹 `GAME OVER`：四家总分与 `1st..4th` 名次；`RESTART`/`BACK` 可用，`CONTINUE` 不可见。
+1. 轮到自己且状态行为 `轮到你 - 请选择一张牌` 时点手牌选中（黄色边框），再点同一张或点 `出牌` 出牌。
+2. 出现可点的 `碰/杠/胡/过` 时点对应按钮；禁用按钮不可点；响应窗口状态行为 `响应窗口 - 碰/杠/过` 或 `响应窗口 - 过`。
+3. 一局结束弹 `第 n 局结束`：`继续` 继续，`重开` 用新 seed 重开，`返回` 退出。
+4. 8 局结束弹 `牌局结束`：四家总分与 `第1名`…`第4名` 名次；`重开`/`返回` 可用，`继续` 不可见。
 5. 重开次数 `restartCount` 递增、seed = 20261031 + restartCount，同一重开次数对局可复现。
+6. 结算层标题与正文为中文（`流局`/`赢家 {名}`、`动作 {动作名}`、`{名} ±n  总分 ±n`）。
 
 ## 4. 普通启动与 --smoke 的差异
 
 | 模式 | 触发 | stdout | 退出 |
 |---|---|---|---|
-| 普通启动 | 编辑器直接运行 | `M0.1 START`，随后进 `LocalGame` 并加载内容/查表 | 常驻；停止按钮或 `BACK` |
+| 普通启动 | 编辑器直接运行 | `M0.1 START`，随后进 `LocalGame` 并加载内容/查表 | 常驻；停止按钮或 `返回` |
 | `--smoke` | 命令行参数带 `--smoke` | `M0.1 START`、`CONTENT OK <64 位 hex>`、`TABLES OK normalWin=<n> windWin=<n> dragonWin=<n> normalAi=<n> windAi=<n> dragonAi=<n>`、`M0.1 SMOKE OK` | 30 帧后自动退出 0 |
 
 `--smoke` 加载 `content/` 与 6 个查表并打印 contentHash 与各表 key 数；失败时 stderr 打印 `M0.1 SMOKE FAILED: <异常类型>: <消息>` 并退出 1。普通启动进对局后加载失败时 Output 红字 `local game content load failed: ...` 并退出 1。

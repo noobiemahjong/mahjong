@@ -62,7 +62,7 @@ public partial class Table : Control
                 BankerText = GetNode<Label>(path + "/BankerMark/Text"),
                 Discards = GetNode<Label>(path + "/Discards/List"),
             };
-            _players[relativeSeat].BankerText.Text = "B";
+            _players[relativeSeat].BankerText.Text = "庄";
         }
 
         _hand = GetNode<HBoxContainer>("Hand");
@@ -119,13 +119,13 @@ public partial class Table : Control
     private void Apply(TableViewState state)
     {
         PlayerView self = state.Players[0];
-        _info.Text = $"Round {state.RoundNo}/8  Wall {state.WallCount}  You {self.Score}\n{state.StatusLine}";
+        _info.Text = $"第 {state.RoundNo}/8 局  余牌 {state.WallCount}  你 {self.Score}\n{state.StatusLine}";
 
         for (int relativeSeat = 0; relativeSeat < 4; relativeSeat++)
         {
             PlayerView player = state.Players[relativeSeat];
             PlayerWidgets widgets = _players[relativeSeat];
-            widgets.Name.Text = (player.IsCurrent ? "> " : "`  ") + player.Name;
+            widgets.Name.Text = (player.IsCurrent ? "> " : "  ") + player.Name;
             widgets.Score.Text = FormatSigned(player.Score);
             widgets.BankerMark.Visible = player.IsBanker;
             ApplyMelds(widgets.Melds, player.Melds);

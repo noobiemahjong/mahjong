@@ -16,7 +16,7 @@ M0.2 要让 1 真人 + 3 Bot 在 Godot 里打满 8 局：宿主按固定频率�
 6. `RoundEnded` 且同批无 `GameEnded` 时暂停 tick 并显示局结算，`CONTINUE` 恢复；`GameEnded` 后不 `Step`，恢复从 `session.Tick + 1` 继续（D6）。
 7. `RESTART` 新建 `GameSession`（`seed = BaseSeed + restartCount`），不复用旧会话；局结算与整局结算都提供 `RESTART`（D7）。
 8. `BACK` 调 `GetTree().Quit()`；M4 之前没有主菜单（D8）。
-9. 占位牌面用 `Panel` + `Label` 与默认字体，文案全 ASCII；鬼牌在容器 `Panel` 上加红色 2px 边框并置 `IsJoker`，不只靠颜色（D9）。
+9. 占位牌面用 `Panel` + `Label`，文案中文并配字体回退（默认字体缺字时用 `SystemFont`/`Theme` 运行时回退，不新增字体资源）；鬼牌在容器 `Panel` 上加红色 2px 边框并置 `IsJoker`，不只靠颜色（D9，中文口径见 [Note](2026-10-31-client-ui-chinese-text.md)）。
 10. tick 用 10Hz 累加器，每满 0.1s 调一次 `Step(Tick + 1)`，单帧最多 5 步，超出的累计时间丢弃；每步后立刻排空全部事件（D10）。
 11. `Table.tscn` 不引用 Session 程序集类型，`Table.Render` 只接收 `TableViewState`、`ClickRouter` 与两个回调（D11）。
 12. AOT 与线程口径：不用反射/动态枚举解析，无静态可变状态，所有会话调用在 `_Ready`/`_Process`/`_UnhandledInput` 内（D12）。
@@ -30,7 +30,7 @@ M0.2 要让 1 真人 + 3 Bot 在 Godot 里打满 8 局：宿主按固定频率�
 - **用 `SceneTree.Paused`/`Engine.TimeScale` 暂停**：一行暂停全部节点；但会同时冻结结算层按钮与输入，且与逻辑 tick 语义混淆。放弃，宿主停 `Step`。
 - **重开复用旧会话**：省一次加载；但会话的局号、累计分、请求与事件 seq 都不可回滚，无法得到新对局。放弃，新建会话并用递增 seed。
 - **Back 回主菜单或占位场景**：导航更完整；M0.2 范围不含主菜单，多做一层空场景没有验收价值。放弃，直接 `Quit`，M4 导航再补。
-- **牌面用中文或 CJK 字体资源**：可读性更接近成品；默认字体无 CJK 字形，新增字体资源越界。放弃，ASCII 占位 + 鬼牌边框。
+- **牌面用中文或 CJK 字体资源**：可读性更接近成品；默认字体无 CJK 字形，新增字体资源越界。放弃，ASCII 占位 + 鬼牌边框（D-T6-9 后改为中文 + `SystemFont` 运行时回退，见 [中文 UI Note](2026-10-31-client-ui-chinese-text.md)）。
 - **`Table` 直接持有 `GameSession`**：少传参数；但子场景要复用于 M1 回放，不能依赖本地会话类型。放弃，Render 只收视图数据与回调。
 
 ## Consequences

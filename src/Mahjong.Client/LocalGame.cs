@@ -58,11 +58,12 @@ public partial class LocalGame : Control
     private ushort? _selectedTileId;
     private bool _paused;
     private bool _gameOver;
-    private string _lastAction = "DEALING";
+    private string _lastAction = "发牌中";
 
     /// <summary>取节点、加载内容与查表并启动第一局；内容失败打印原因并以 1 退出。</summary>
     public override void _Ready()
     {
+        ApplyUiFont();
         _table = GetNode<Table>("Table");
         _overlay = GetNode<Control>("ResultOverlay");
         _title = GetNode<Label>("ResultOverlay/Title");
@@ -88,6 +89,20 @@ public partial class LocalGame : Control
         }
 
         StartSession();
+    }
+
+    /// <summary>
+    /// 中文 UI 的 CJK 字体回退：运行时创建 SystemFont（不新增 .ttf/.tres 资源），
+    /// 挂到根 Control 的 Theme 上向全部子控件级联；AOT 安全（无反射/动态类型）。
+    /// </summary>
+    private void ApplyUiFont()
+    {
+        var font = new SystemFont
+        {
+            FontNames = new[] { "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "Noto Sans CJK SC" },
+            AllowSystemFallback = true,
+        };
+        Theme = new Theme { DefaultFont = font, DefaultFontSize = 16 };
     }
 
     /// <summary>把鼠标/触摸事件喂给两条指针源；由 _Process 每帧排空。</summary>
@@ -294,7 +309,7 @@ public partial class LocalGame : Control
         _lastDiscardedCardId = 0;
         _currentRoundNo = 1;
         _finishedRoundNo = 1;
-        _lastAction = "DEALING";
+        _lastAction = "发牌中";
         HideOverlay();
 
         // Start 只产座位状态事件；排空以免首步之前缓冲增长。
@@ -327,7 +342,7 @@ public partial class LocalGame : Control
                 {
                     RoundStartedPayload payload = SessionEventPayloadReader.ReadRoundStarted(sessionEvent);
                     _currentRoundNo = payload.RoundNo;
-                    _lastAction = $"ROUND {payload.RoundNo} START";
+                    _lastAction = $"第 {payload.RoundNo} 局开始";
                     break;
                 }
 
@@ -335,8 +350,8 @@ public partial class LocalGame : Control
                 {
                     TurnStartedPayload payload = SessionEventPayloadReader.ReadTurnStarted(sessionEvent);
                     _lastAction = payload.Seat == HumanSeat
-                        ? "YOUR TURN"
-                        : $"{RelativeName(payload.Seat)} TURN";
+                        ? "轮到你"
+                        : $"{RelativeName(payload.Seat)}的回合";
                     break;
                 }
 
@@ -344,7 +359,7 @@ public partial class LocalGame : Control
                 {
                     DiscardedPayload payload = SessionEventPayloadReader.ReadDiscarded(sessionEvent);
                     _lastDiscardedCardId = payload.TileId;
-                    _lastAction = $"{RelativeName(payload.Seat)} DISCARDED {TileLabel(payload.TileId)}";
+                    _lastAction = $"{RelativeName(payload.Seat)} 打出 {TileLabel(payload.TileId)}";
                     break;
                 }
 
@@ -358,7 +373,7 @@ public partial class LocalGame : Control
                 case SessionEventKind.Drew:
                 {
                     DrewPayload payload = SessionEventPayloadReader.ReadDrew(sessionEvent);
-                    _lastAction = payload.Seat == HumanSeat ? "YOU DREW" : $"{RelativeName(payload.Seat)} DREW";
+                    _lastAction = payload.Seat == HumanSeat ? "你摸牌" : $"{RelativeName(payload.Seat)} 摸牌";
                     break;
                 }
 
@@ -395,11 +410,11 @@ public partial class LocalGame : Control
 
         _paused = true;
         _selectedTileId = null;
-        _title.Text = $"ROUND {_finishedRoundNo} RESULT";
+        _title.Text = $"第 {_finishedRoundNo} 局结束";
 
         var body = new StringBuilder();
-        body.Append(payload.WinnerSeat < 0 ? "DRAW" : $"WINNER {SeatName((byte)payload.WinnerSeat)}");
-        body.Append('\n').Append("ACTION ").Append(payload.ActionType);
+        body.Append(payload.WinnerSeat < 0 ? "流局" : $"赢家 {SeatName((byte)payload.WinnerSeat)}");
+        body.Append('\n').Append("动作 ").Append(ActionName(payload.ActionType));
         GameState state = _session.State;
         for (int relativeSeat = 0; relativeSeat < GameState.PlayerCount; relativeSeat++)
         {
@@ -408,7 +423,7 @@ public partial class LocalGame : Control
                 .Append(TableViewProjection.RelativeName(relativeSeat))
                 .Append(' ')
                 .Append(FormatSigned(payload.ScoreDelta[seat]))
-                .Append("  TOTAL ")
+                .Append("  总分 ")
                 .Append(FormatSigned(state.Players[seat].Score));
         }
 
@@ -427,7 +442,7 @@ public partial class LocalGame : Control
         _gameOver = true;
         _paused = false;
         _selectedTileId = null;
-        _title.Text = "GAME OVER";
+        _title.Text = "牌局结束";
 
         var body = new StringBuilder();
         for (int relativeSeat = 0; relativeSeat < GameState.PlayerCount; relativeSeat++)
@@ -441,8 +456,9 @@ public partial class LocalGame : Control
 
         for (int rank = 0; rank < payload.Ranking.Length; rank++)
         {
-            body.Append(Ordinal(rank + 1))
-                .Append(' ')
+            body.Append("第")
+                .Append(rank + 1)
+                .Append("名 ")
                 .Append(SeatName(payload.Ranking[rank]))
                 .Append('\n');
         }
@@ -527,30 +543,30 @@ public partial class LocalGame : Control
     {
         if (_gameOver)
         {
-            return "GAME OVER - RESTART OR BACK";
+            return "牌局结束 - 重开或返回";
         }
 
         if (_paused)
         {
-            return $"ROUND {_finishedRoundNo} RESULT - CONTINUE OR RESTART";
+            return $"第 {_finishedRoundNo} 局结束 - 继续或重开";
         }
 
         if (Contains(enabledActions, CommandVerb.Discard))
         {
-            return _selectedTileId is null ? "YOUR TURN - SELECT A TILE" : "TILE SELECTED - CLICK AGAIN OR DISCARD";
+            return _selectedTileId is null ? "轮到你 - 请选择一张牌" : "已选牌 - 再点一次或按出牌";
         }
 
         if (Contains(enabledActions, CommandVerb.Win))
         {
-            return "WIN AVAILABLE - WIN OR PASS";
+            return "赢牌可用 - 胡或过";
         }
 
         if (Contains(enabledActions, CommandVerb.Pong) || Contains(enabledActions, CommandVerb.Kong))
         {
-            return "RESPONSE WINDOW - PONG/KONG/PASS";
+            return "响应窗口 - 碰/杠/过";
         }
 
-        return Contains(enabledActions, CommandVerb.Pass) ? "RESPONSE WINDOW - PASS" : _lastAction;
+        return Contains(enabledActions, CommandVerb.Pass) ? "响应窗口 - 过" : _lastAction;
     }
 
     private bool HasEnabled(CommandVerb verb) =>
@@ -600,11 +616,22 @@ public partial class LocalGame : Control
 
     private static string FormatSigned(int value) => value >= 0 ? $"+{value}" : value.ToString();
 
-    private static string Ordinal(int place) => place switch
+    /// <summary>计分动作位集转中文说明；一个动作可同时带多个番种。</summary>
+    private static string ActionName(ScoreActionType type)
     {
-        1 => "1st",
-        2 => "2nd",
-        3 => "3rd",
-        _ => $"{place}th",
-    };
+        if (type == ScoreActionType.None)
+        {
+            return "无";
+        }
+
+        var parts = new List<string>(6);
+        if ((type & ScoreActionType.SelfDrawn) != 0) parts.Add("自摸");
+        if ((type & ScoreActionType.SevenPairs) != 0) parts.Add("七对");
+        if ((type & ScoreActionType.ConcealedKong) != 0) parts.Add("暗杠");
+        if ((type & ScoreActionType.ExposedKong) != 0) parts.Add("明杠");
+        if ((type & ScoreActionType.KongSupplement) != 0) parts.Add("补杠");
+        if ((type & ScoreActionType.KongUpFlower) != 0) parts.Add("杠上开花");
+        if ((type & ScoreActionType.NoJoker) != 0) parts.Add("无鬼");
+        return string.Join("、", parts);
+    }
 }

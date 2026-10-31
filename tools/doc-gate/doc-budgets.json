@@ -82,6 +82,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-31-client-ui-chinese-text.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-31-godot-minimal-loop.md",
       "limitBytes": 8192
     },
@@ -151,6 +155,10 @@
     },
     {
       "path": ".agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t5.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t6.md",
       "limitBytes": 8192
     },
     {
@@ -387,7 +395,7 @@
     },
     {
       "path": "docs/reference/mutation-ledger.md",
-      "limitBytes": 32768
+      "limitBytes": 34816
     },
     {
       "path": "docs/specs/discovery.md",

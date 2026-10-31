@@ -18,6 +18,7 @@
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md	8192
+.agents/notes/implemented/feature/2026-10-31-client-ui-chinese-text.md	8192
 .agents/notes/implemented/feature/2026-10-31-godot-minimal-loop.md	8192
 .agents/notes/implemented/feature/2026-10-31-local-game-session.md	8192
 .agents/notes/implemented/feature/2026-10-31-simple-bot-policy.md	8192
@@ -36,6 +37,7 @@
 .agents/notes/implemented/process/2026-10-30-rule-variants-v1-and-m03.md	8192
 .agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t5.md	8192
+.agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t6.md	8192
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
@@ -94,7 +96,7 @@ docs/postmortem/README.md	4096
 docs/reference/README.md	4096
 docs/reference/game-event-engine.md	8192
 docs/reference/godot-aot.md	8192
-docs/reference/mutation-ledger.md	32768
+docs/reference/mutation-ledger.md	34816
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240

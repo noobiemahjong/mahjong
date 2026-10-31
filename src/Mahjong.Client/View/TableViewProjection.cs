@@ -18,11 +18,11 @@ internal static class TableViewProjection
     /// <summary>按相对座位取显示名：1 下家、2 对家、3 上家。</summary>
     public static string RelativeName(int relativeSeat) => relativeSeat switch
     {
-        0 => "YOU",
-        1 => "NEXT",
-        2 => "ACROSS",
-        3 => "PREV",
-        _ => "SEAT",
+        0 => "你",
+        1 => "下家",
+        2 => "对家",
+        3 => "上家",
+        _ => "座位",
     };
 
     /// <summary>请求位集是否允许该动词；命令构造与按钮启用共用。</summary>
@@ -36,26 +36,26 @@ internal static class TableViewProjection
         _ => false,
     };
 
-    /// <summary>牌种到 ASCII 标签：万 1M-9M、筒 1P-9P、条 1S-9S、风 WE/WS/WW/WN、箭 DR/DG/DW。</summary>
+    /// <summary>牌种到中文标签：万 1万-9万、筒 1筒-9筒、条 1条-9条、风 东风/南风/西风/北风、箭 红中/发财/白板。</summary>
     public static string Label(TileType type) => type.Suit switch
     {
         // SuitType.Character/Dot/Bamboo 依次是万/筒/条（见 TileTypes.cs）。
-        SuitType.Character => $"{type.Rank}M",
-        SuitType.Dot => $"{type.Rank}P",
-        SuitType.Bamboo => $"{type.Rank}S",
-        SuitType.Wind => type.Rank switch { 1 => "WE", 2 => "WS", 3 => "WW", _ => "WN" },
-        SuitType.Dragon => type.Rank switch { 1 => "DR", 2 => "DG", _ => "DW" },
-        _ => "??",
+        SuitType.Character => $"{type.Rank}万",
+        SuitType.Dot => $"{type.Rank}筒",
+        SuitType.Bamboo => $"{type.Rank}条",
+        SuitType.Wind => type.Rank switch { 1 => "东风", 2 => "南风", 3 => "西风", _ => "北风" },
+        SuitType.Dragon => type.Rank switch { 1 => "红中", 2 => "发财", _ => "白板" },
+        _ => "？？",
     };
 
-    /// <summary>副露种类缩写，用于副露展示文本与状态行。</summary>
+    /// <summary>副露种类中文名，用于副露展示文本与状态行。</summary>
     public static string MeldAbbreviation(MeldKind kind) => kind switch
     {
-        MeldKind.Pong => "PONG",
-        MeldKind.KongExposed => "KONG",
-        MeldKind.KongConcealed => "CONCEALED_KONG",
-        MeldKind.KongSupplement => "ADDED_KONG",
-        _ => "MELD",
+        MeldKind.Pong => "碰",
+        MeldKind.KongExposed => "明杠",
+        MeldKind.KongConcealed => "暗杠",
+        MeldKind.KongSupplement => "补杠",
+        _ => "副露",
     };
 
     /// <summary>按牌种 id 取标签；用于事件里的物理牌 id（未知 id 返回 ??）。</summary>

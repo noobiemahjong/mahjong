@@ -82,6 +82,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-31-godot-minimal-loop.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-31-local-game-session.md",
       "limitBytes": 8192
     },
@@ -399,6 +403,10 @@
     },
     {
       "path": "docs/subsystems/bot.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/subsystems/client.md",
       "limitBytes": 10240
     },
     {

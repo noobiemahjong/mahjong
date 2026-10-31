@@ -1,0 +1,365 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://View/Table.cs" id="1_table"]
+
+[node name="Table" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_table")
+
+[node name="Info" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 1272.0
+offset_bottom = 58.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "Round 1/8  Wall 0  You 0"
+
+[node name="Players" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+mouse_filter = 2
+
+[node name="Player0" type="Control" parent="Players"]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 420.0
+offset_right = 940.0
+offset_bottom = 544.0
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Players/Player0"]
+layout_mode = 0
+offset_left = 8.0
+offset_right = 208.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "YOU"
+
+[node name="Score" type="Label" parent="Players/Player0"]
+layout_mode = 0
+offset_left = 210.0
+offset_right = 550.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "+0"
+
+[node name="Melds" type="HBoxContainer" parent="Players/Player0"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 30.0
+offset_right = 592.0
+offset_bottom = 64.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="BankerMark" type="Control" parent="Players/Player0"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 66.0
+offset_right = 34.0
+offset_bottom = 92.0
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Players/Player0/BankerMark"]
+layout_mode = 0
+offset_right = 26.0
+offset_bottom = 26.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "B"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Discards" type="Control" parent="Players/Player0"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 66.0
+offset_right = 580.0
+offset_bottom = 116.0
+mouse_filter = 2
+
+[node name="List" type="Label" parent="Players/Player0/Discards"]
+layout_mode = 0
+offset_right = 536.0
+offset_bottom = 50.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Player1" type="Control" parent="Players"]
+layout_mode = 0
+offset_left = 950.0
+offset_top = 200.0
+offset_right = 1264.0
+offset_bottom = 500.0
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Players/Player1"]
+layout_mode = 0
+offset_left = 8.0
+offset_right = 198.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "NEXT"
+
+[node name="Score" type="Label" parent="Players/Player1"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 30.0
+offset_right = 198.0
+offset_bottom = 58.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "+0"
+
+[node name="Melds" type="HBoxContainer" parent="Players/Player1"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 60.0
+offset_right = 306.0
+offset_bottom = 94.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="BankerMark" type="Control" parent="Players/Player1"]
+layout_mode = 0
+offset_left = 200.0
+offset_right = 226.0
+offset_bottom = 26.0
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Players/Player1/BankerMark"]
+layout_mode = 0
+offset_right = 26.0
+offset_bottom = 26.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "B"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Discards" type="Control" parent="Players/Player1"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 98.0
+offset_right = 306.0
+offset_bottom = 292.0
+mouse_filter = 2
+
+[node name="List" type="Label" parent="Players/Player1/Discards"]
+layout_mode = 0
+offset_right = 298.0
+offset_bottom = 194.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Player2" type="Control" parent="Players"]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 64.0
+offset_right = 940.0
+offset_bottom = 188.0
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Players/Player2"]
+layout_mode = 0
+offset_left = 8.0
+offset_right = 208.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "ACROSS"
+
+[node name="Score" type="Label" parent="Players/Player2"]
+layout_mode = 0
+offset_left = 210.0
+offset_right = 550.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "+0"
+
+[node name="Melds" type="HBoxContainer" parent="Players/Player2"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 30.0
+offset_right = 592.0
+offset_bottom = 64.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="BankerMark" type="Control" parent="Players/Player2"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 66.0
+offset_right = 34.0
+offset_bottom = 92.0
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Players/Player2/BankerMark"]
+layout_mode = 0
+offset_right = 26.0
+offset_bottom = 26.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "B"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Discards" type="Control" parent="Players/Player2"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 66.0
+offset_right = 580.0
+offset_bottom = 116.0
+mouse_filter = 2
+
+[node name="List" type="Label" parent="Players/Player2/Discards"]
+layout_mode = 0
+offset_right = 536.0
+offset_bottom = 50.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Player3" type="Control" parent="Players"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 200.0
+offset_right = 330.0
+offset_bottom = 500.0
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Players/Player3"]
+layout_mode = 0
+offset_left = 8.0
+offset_right = 198.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "PREV"
+
+[node name="Score" type="Label" parent="Players/Player3"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 30.0
+offset_right = 198.0
+offset_bottom = 58.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+text = "+0"
+
+[node name="Melds" type="HBoxContainer" parent="Players/Player3"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 60.0
+offset_right = 306.0
+offset_bottom = 94.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="BankerMark" type="Control" parent="Players/Player3"]
+layout_mode = 0
+offset_left = 200.0
+offset_right = 226.0
+offset_bottom = 26.0
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Players/Player3/BankerMark"]
+layout_mode = 0
+offset_right = 26.0
+offset_bottom = 26.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "B"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Discards" type="Control" parent="Players/Player3"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 98.0
+offset_right = 306.0
+offset_bottom = 292.0
+mouse_filter = 2
+
+[node name="List" type="Label" parent="Players/Player3/Discards"]
+layout_mode = 0
+offset_right = 298.0
+offset_bottom = 194.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Hand" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 552.0
+offset_right = 940.0
+offset_bottom = 626.0
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 634.0
+offset_right = 940.0
+offset_bottom = 690.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Discard" type="Button" parent="Actions"]
+custom_minimum_size = Vector2(104, 44)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "DISCARD"
+
+[node name="Pong" type="Button" parent="Actions"]
+custom_minimum_size = Vector2(104, 44)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "PONG"
+
+[node name="Kong" type="Button" parent="Actions"]
+custom_minimum_size = Vector2(104, 44)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "KONG"
+
+[node name="Win" type="Button" parent="Actions"]
+custom_minimum_size = Vector2(104, 44)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "WIN"
+
+[node name="Pass" type="Button" parent="Actions"]
+custom_minimum_size = Vector2(104, 44)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "PASS"

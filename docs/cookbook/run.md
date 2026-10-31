@@ -22,17 +22,25 @@ Godot 标准版（非 mono）跑不了 C# 工程；缺 .NET 版时先装，编�
 
 1. FileSystem 面板双击 `res://Startup.tscn`：工程主场景，`application/run/main_scene` 已指向它，根节点 `Startup` 挂 `Startup.cs`。
 2. 按 F5（Run Project）或点右上角 ▶。
-3. 期望 Output 面板打印 `M0.1 START`；窗口 1280×720 且无内容（GL Compatibility 渲染的空场景）。
-4. 停止：F8 或工具栏停止按钮；普通启动不会自己退出。
+3. 期望 Output 打印 `M0.1 START`，随后自动切到 `res://LocalGame.tscn`：1280×720 牌桌，Info 显示局号/剩余牌数/分数与状态行，四家区域、自己手牌与 Actions 按钮可见。
+4. 停止：F8 或工具栏停止按钮；对局中也可点 `BACK` 退出进程。
 
-## 3. 普通启动与 --smoke 的差异
+## 3. 本地对局操作
+
+1. 轮到自己且状态行为 `YOUR TURN - SELECT A TILE` 时点手牌选中（黄色边框），再点同一张或点 `DISCARD` 出牌。
+2. 出现可点的 `PONG/KONG/WIN/PASS` 时点对应按钮；禁用按钮不可点；响应窗口状态行为 `RESPONSE WINDOW - ...`。
+3. 一局结束弹 `ROUND n RESULT`：`CONTINUE` 继续，`RESTART` 用新 seed 重开，`BACK` 退出。
+4. 8 局结束弹 `GAME OVER`：四家总分与 `1st..4th` 名次；`RESTART`/`BACK` 可用，`CONTINUE` 不可见。
+5. 重开次数 `restartCount` 递增、seed = 20261031 + restartCount，同一重开次数对局可复现。
+
+## 4. 普通启动与 --smoke 的差异
 
 | 模式 | 触发 | stdout | 退出 |
 |---|---|---|---|
-| 普通启动 | 编辑器直接运行 | `M0.1 START` | 常驻，需手动停止 |
+| 普通启动 | 编辑器直接运行 | `M0.1 START`，随后进 `LocalGame` 并加载内容/查表 | 常驻；停止按钮或 `BACK` |
 | `--smoke` | 命令行参数带 `--smoke` | `M0.1 START`、`CONTENT OK <64 位 hex>`、`TABLES OK normalWin=<n> windWin=<n> dragonWin=<n> normalAi=<n> windAi=<n> dragonAi=<n>`、`M0.1 SMOKE OK` | 30 帧后自动退出 0 |
 
-`--smoke` 额外加载 `content/` 与 6 个查表，打印 contentHash 与各表 key 数；普通启动不读内容目录。失败时 stderr 打印 `M0.1 SMOKE FAILED: <异常类型>: <消息>` 并退出 1。
+`--smoke` 加载 `content/` 与 6 个查表并打印 contentHash 与各表 key 数；失败时 stderr 打印 `M0.1 SMOKE FAILED: <异常类型>: <消息>` 并退出 1。普通启动进对局后加载失败时 Output 红字 `local game content load failed: ...` 并退出 1。
 
 不开编辑器的等价自检（退出码 0、stderr 为空即通过）：
 
@@ -42,13 +50,13 @@ Godot 标准版（非 mono）跑不了 C# 工程；缺 .NET 版时先装，编�
 
 编辑器内试冒烟可在 Project Settings → Editor → Run → Main Run Args 填 `--smoke`，用完清空，避免把本机调试参数写进 `project.godot`。
 
-## 4. 内容目录怎么找
+## 5. 内容目录怎么找
 
 `ContentPaths.Resolve()` 依次尝试：环境变量 `MAHJONG_CONTENT_DIR`（设了但目录不存在时直接报错，不回退）→ 可执行文件旁的 `content/` → 从当前工作目录逐级向上找 `content/`，遇到含 `global.json` 或 `.git` 的目录即停。
 
-编辑器里工作目录是工程目录，向上命中仓库根 `content/`；导出产物则把 `content/` 复制到 exe 旁边（见 [aot-export](aot-export.md)）。要指向别的内容根，设 `MAHJONG_CONTENT_DIR`。
+普通启动进对局与 `--smoke` 都走这条解析；编辑器里工作目录是工程目录，向上命中仓库根 `content/`；导出产物则把 `content/` 复制到 exe 旁边（见 [aot-export](aot-export.md)）。要指向别的内容根，设 `MAHJONG_CONTENT_DIR`。
 
-## 5. MCP 插件注意点
+## 6. MCP 插件注意点
 
 `src/Mahjong.Client/addons/godot_ai/` 被 [.gitignore](../../.gitignore) 忽略，只在装了 Godot MCP 的本机存在；插件启用项与 `[autoload] _mcp_game_helper` 写进 `project.godot` 后属本机状态，入库前要剥掉，理由见 [Note](../../.agents/notes/implemented/process/2026-10-29-godot-mcp-plugin-not-tracked.md)。
 

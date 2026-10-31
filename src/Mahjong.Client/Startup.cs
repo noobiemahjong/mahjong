@@ -6,7 +6,7 @@ using Mahjong.Core.Rules;
 namespace Mahjong.Client;
 
 /// <summary>
-/// 客户端入口场景的根节点。普通启动只打印就绪标记，不读取内容目录。
+/// 客户端入口场景的根节点。普通启动打印就绪标记后延迟切到本地对局场景。
 /// 带 <c>--smoke</c> 时加载内容目录与查表、打印 contentHash 与表条目数，固定帧数后以 0 退出。
 /// 内容或查表加载失败时打印原因并以非 0 退出，供 AOT 冒烟脚本判定导出产物可用。
 /// </summary>
@@ -17,6 +17,9 @@ public partial class Startup : Node
 
     /// <summary>冒烟模式退出前保持运行的帧数，用于覆盖首帧初始化。</summary>
     private const int SmokeFrameLimit = 30;
+
+    /// <summary>普通启动进入的本地对局场景。</summary>
+    private const string LocalGameScenePath = "res://LocalGame.tscn";
 
     private bool _smokeMode;
     private bool _failed;
@@ -31,6 +34,8 @@ public partial class Startup : Node
             || HasArgument(OS.GetCmdlineUserArgs(), SmokeArgument);
         if (!_smokeMode)
         {
+            // 延迟到本帧 _Ready 之后切场景：同步 ChangeSceneToFile 会切断当前场景的初始化。
+            Callable.From(OpenLocalGame).CallDeferred();
             return;
         }
 
@@ -81,6 +86,9 @@ public partial class Startup : Node
             + $" windAi={tables.AiRowKeyCount(SuitType.Wind)}"
             + $" dragonAi={tables.AiRowKeyCount(SuitType.Dragon)}");
     }
+
+    /// <summary>普通启动：切换到本地对局场景。</summary>
+    private void OpenLocalGame() => GetTree().ChangeSceneToFile(LocalGameScenePath);
 
     private static bool HasArgument(string[] arguments, string expected)
     {

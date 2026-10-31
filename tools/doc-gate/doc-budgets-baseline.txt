@@ -18,6 +18,7 @@
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md	8192
+.agents/notes/implemented/feature/2026-10-31-godot-minimal-loop.md	8192
 .agents/notes/implemented/feature/2026-10-31-local-game-session.md	8192
 .agents/notes/implemented/feature/2026-10-31-simple-bot-policy.md	8192
 .agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md	8192
@@ -98,6 +99,7 @@ docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240
 docs/subsystems/bot.md	10240
+docs/subsystems/client.md	10240
 docs/subsystems/core.md	10240
 docs/subsystems/flow.md	10240
 docs/subsystems/scoring.md	10240

@@ -52,7 +52,7 @@
 
 ## 6. 与 T-5 的接缝
 
-- T-5 会话从请求构造 `BotContext`：`self` 取 `state.Players[seat]` 同一引用，`AvailableSkills` 填本回合请求的技能集，`TargetCard`/`LastDrawn` 按语境填，`Random` 用会话随机源。
-- 固定 300ms 请求延迟、请求/超时/托管、4 Bot 8 局驱动与座位过滤归 T-5；策略只做单次同步决策，不等待、不驱动循环。
-- `BotDecision` 转成命令或应答由会话做；T-4 不接入生产，Session/Client/Server 不引用 `Mahjong.Core.Bot`。
-- M4 强策略实现 `IBotPolicy` 即可替换并消费 `BotContext.Random`；`SimpleBotPolicy` 保留为合法基线。
+- `GameSession` 构造 `new SimpleBotPolicy(wins, verifier)`；非真人座位在请求打开后按 `max(1, ceil(TickRate × 300 / 1000))` tick 挂起（10Hz = 3 tick），`Step` 开头按 requestId 升序决策并走与人类相同的 `Submit` 路径，请求已被宿主代答时跳过。
+- 会话按请求种类构造 `BotContext`：Win 请求 `AvailableSkills = [SelfDrawn, SelfDrawnWith7Pairs]`、`LastDrawn` = 本回合摸牌；自己回合 Discard 请求 `AvailableSkills` 为空、`LastDrawn` 同上；响应窗口 `AvailableSkills = [Pong, Kong]`、`TargetCard` = 窗口弃牌、`LastDrawn = null`；`Random` 用会话随机源但策略不消费。
+- `BotDecision` → `GameCommand` 由会话转换：技能映射动词（Pong/Kong/SelfDrawn 或 SelfDrawnWith7Pairs），出牌映射 `slot = hand.IndexOf(card)` 与物理牌 id，两者皆 null 映射 Pass；两者皆非空或决策被拒视为 bug 抛 `InvalidOperationException`。
+- 4 Bot 8 局驱动、超时托管与座位过滤归会话；策略只做单次同步决策，不等待、不驱动循环。M4 强策略实现 `IBotPolicy` 即可替换并消费 `BotContext.Random`，`SimpleBotPolicy` 保留为合法基线。

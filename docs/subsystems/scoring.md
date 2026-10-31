@@ -76,7 +76,7 @@
 
 - `RoundCommandKind : byte` 取 `Discard = 1`、`Win = 2`，数值是脚本与回放编码的一部分。
 - `RoundCommand(byte Seat, RoundCommandKind Kind, int Slot = 0)` 是 `readonly record struct`，只承载数据、不做合法性校验；`RoundCommand.Discard(seat, slot)` 与 `RoundCommand.Win(seat)` 是工厂。
-- `RoundResult` 是单局结果：`NoWinnerSeat = 255`、`RoundNo`、`BankerSeat`（本局坐庄、轮换前）、`WinnerSeat`、`IsDraw`、`ActionType`、`ScoreDelta`（`Release` 之前取样）、`TotalScores`（`Release` 之后）。两个分数序列在构造时复制为只读快照，不随后续对局变化；构造器是 internal。
+- `RoundResult` 是单局结果：`NoWinnerSeat = 255`、`RoundNo`、`BankerSeat`（本局坐庄、轮换前）、`WinnerSeat`、`IsDraw`、`ActionType`、`ScoreDelta`（`Release` 之前取样）、`TotalScores`（`Release` 之后）。两个分数序列在构造时复制为只读快照，不随后续对局变化；构造器是 public。
 
 ## 6. 庄家轮换与排名
 
@@ -85,6 +85,8 @@
 
 ## 7. 与 T-5 的接缝
 
-- `RoundResult` 是 T-5 `RoundEnded`（`winnerSeat`/`scoreDelta`/`actionType`）与 `GameEnded`（`totalScores`/排名）的 payload 来源；T-3 不定义事件类型、不做事件编码。
-- 杠分：T-5 在杠 `Commit` 之后调用 `Scores.ApplyKong(seat, kind, sourceSeat)`；自摸时按本局是否已有杠位传 `kongUpFlower`。T-3 驱动不产生杠，自摸恒传 `kongUpFlower: false`。
-- 真实会话的回合推进用 Action 树、响应窗口与请求/超时；`RunRound` 的脚本命令与默认出牌不复用于 T-5。
+- `RoundResult` 构造器公开：会话在 `Release` 之后用 `RoundResult` 构造 `RoundEnded` payload（`winnerSeat`/`scoreDelta`/`actionType`）；`RoundRanking.Rank` 是终局名次唯一实现，`RoundController.Rank` 委托同一实现。
+- `ApplySevenPairsSelfDrawn(winnerSeat, hasJoker)` 只结算七对：每家付 `(hasJoker ? 2 : 4) * 2`、赢家收三份，置位 `SelfDrawn | SevenPairs`（无鬼再置 `NoJoker`），不检查本局其他座位的杠位。
+- 杠分：会话在杠 `Commit` 之后调 `ApplyKong(seat, kind, sourceSeat)`；`kongUpFlower` 精确口径是「赢家本回合最近一次摸牌为杠后补牌」，由会话跟踪布尔，不使用局内杠位聚合（其他家的杠不算），七对恒不适用。
+- 结算顺序：会话先取样 `RoundDelta` 与 `RoundActionType` → `Release` → 写回 `PlayerState.Score` 镜像 → 构造 `RoundResult` → 产 `RoundEnded`；流局 `RollbackRound` + `Release` 后同样写回镜像。
+- T-3 的 `RunRound` 不产生杠、自摸恒传 `kongUpFlower: false`；真实会话用单根协程、响应窗口与请求/超时，不复用 `RunRound` 的脚本命令与默认出牌。

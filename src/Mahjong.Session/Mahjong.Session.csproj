@@ -4,4 +4,8 @@
     <ProjectReference Include="..\Mahjong.Core\Mahjong.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mahjong.Tests" />
+  </ItemGroup>
+
 </Project>

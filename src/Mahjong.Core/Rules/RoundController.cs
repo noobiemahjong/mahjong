@@ -166,25 +166,10 @@ public sealed class RoundController
 
     /// <summary>
     /// 按总分排名：降序，同分按座位号升序。返回长度 4 的只读列表，是纯函数，随时可调（不要求 8 局已打完）。
+    /// 排序口径委托 <see cref="RoundRanking.Rank"/>，与终局排名共用同一实现。
     /// </summary>
     /// <returns>4 个座位，按名次从高到低排列。</returns>
-    public IReadOnlyList<byte> Rank()
-    {
-        byte[] seats = new byte[GameState.PlayerCount];
-        for (byte seat = 0; seat < GameState.PlayerCount; seat++)
-        {
-            seats[seat] = seat;
-        }
-
-        IReadOnlyList<short> totals = Scores.TotalScores;
-        Array.Sort(seats, (left, right) =>
-        {
-            int byScore = totals[right].CompareTo(totals[left]);
-            return byScore != 0 ? byScore : left.CompareTo(right);
-        });
-
-        return Array.AsReadOnly(seats);
-    }
+    public IReadOnlyList<byte> Rank() => RoundRanking.Rank(Scores.TotalScores);
 
     /// <summary>
     /// 自摸结算：七对优先（<see cref="IWinChecker.IsSevenPairs"/> 成立即按七对，不再按常规胡），

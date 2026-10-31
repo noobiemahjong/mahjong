@@ -15,7 +15,7 @@ public sealed class RoundResult
     private readonly ReadOnlyCollection<short> _scoreDelta;
     private readonly ReadOnlyCollection<short> _totalScores;
 
-    /// <summary>创建单局结果；两个分数序列会被复制，之后修改调用方集合不影响本对象。</summary>
+    /// <summary>创建单局结果；两个分数序列会被复制，之后修改调用方集合不影响本对象。T-5 会话用本类型构造结算 payload。</summary>
     /// <param name="roundNo">本局局号 1–8。</param>
     /// <param name="bankerSeat">本局坐庄的座位 0–3（轮换前的庄家）。</param>
     /// <param name="winnerSeat">赢家座位 0–3；流局为 <see cref="NoWinnerSeat"/>。</param>
@@ -24,7 +24,7 @@ public sealed class RoundResult
     /// <param name="totalScores">4 个座位在本局结算后的累计总分，下标即座位号。</param>
     /// <exception cref="ArgumentNullException"><paramref name="scoreDelta"/> 或 <paramref name="totalScores"/> 为 null。</exception>
     /// <exception cref="ArgumentException">任一序列长度不是 4。</exception>
-    internal RoundResult(
+    public RoundResult(
         byte roundNo,
         byte bankerSeat,
         byte winnerSeat,

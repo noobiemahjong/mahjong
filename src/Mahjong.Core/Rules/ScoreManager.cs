@@ -175,6 +175,41 @@ public sealed class ScoreManager
     }
 
     /// <summary>
+    /// 七对自摸结算：每家付一份，赢家收三份；每份金额为 <c>(hasJoker ? 2 : 4) * 2</c>。
+    /// 同时置位 <see cref="ScoreActionType.SelfDrawn"/>、<see cref="ScoreActionType.SevenPairs"/>，
+    /// 无鬼时再置 <see cref="ScoreActionType.NoJoker"/>。
+    /// 只约束赢家自己的手牌与副露（七对须 0 副露由调用方的判定与手牌张数保证），不检查本局其他家的杠位：
+    /// 其他家先杠不妨碍赢家按七对结算，因此不能复用 <see cref="ApplySelfDrawn"/> 的局内杠位检查。
+    /// </summary>
+    /// <param name="winnerSeat">七对自摸赢家座位 0–3。</param>
+    /// <param name="hasJoker">本局有鬼牌且赢家手牌含该牌种；<c>false</c> 表示无鬼自摸。</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="winnerSeat"/> 不在 0–3；失败时不改状态。</exception>
+    public void ApplySevenPairsSelfDrawn(byte winnerSeat, bool hasJoker)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        int per = (hasJoker ? 2 : 4) * 2;
+        for (byte seat = 0; seat < SeatCount; seat++)
+        {
+            _roundDelta[seat] = seat == winnerSeat
+                ? (short)(_roundDelta[seat] + (per * 3))
+                : (short)(_roundDelta[seat] - per);
+        }
+
+        _roundActionType |= ScoreActionType.SelfDrawn | ScoreActionType.SevenPairs;
+        if (!hasJoker)
+        {
+            _roundActionType |= ScoreActionType.NoJoker;
+        }
+    }
+
+    /// <summary>
     /// 杠结算：明杠由放杠者付 3（杠家 +3、放杠者 -3）；暗杠其余三家各付 2（杠家 +6）；
     /// 补杠其余三家各付 1（杠家 +3）。同时置位对应的杠位标记。
     /// 明杠的放杠者必须是被取牌的那一家；暗杠与补杠没有目标座位，必须传 <see cref="Meld.NoTargetSeat"/>。

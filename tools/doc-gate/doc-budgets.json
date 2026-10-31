@@ -82,6 +82,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-31-local-game-session.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-31-simple-bot-policy.md",
       "limitBytes": 8192
     },
@@ -139,6 +143,10 @@
     },
     {
       "path": ".agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t5.md",
       "limitBytes": 8192
     },
     {
@@ -375,7 +383,7 @@
     },
     {
       "path": "docs/reference/mutation-ledger.md",
-      "limitBytes": 16384
+      "limitBytes": 32768
     },
     {
       "path": "docs/specs/discovery.md",
@@ -403,6 +411,10 @@
     },
     {
       "path": "docs/subsystems/scoring.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/subsystems/session.md",
       "limitBytes": 10240
     },
     {

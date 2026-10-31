@@ -18,9 +18,9 @@
 
 - 构造：校验配置与依赖，装配局面、计分账本、校验器、Bot 策略、事件缓冲、请求登记表与调度器；不启动、不产事件、不推进 tick。依赖任一 null 抛 `ArgumentNullException`；配置非法抛 `ArgumentException`/`ArgumentOutOfRangeException`（`ParamName` 为 `config`）。
 - 配置合法组合只有 `(null, 4)` 与 `(0–3, 3)`；`TickRate`/`TurnTimeoutTicks`/`ResponseTimeoutTicks` 均至少 1。
-- `Start()`：只允许一次，二次调用抛 `InvalidOperationException`；立即按座位 0–3 产出 `SeatStateChanged`（真人 Online，其余 Bot），创建单根动作协程交给调度器，不推进流程。
+- `Start()`：只允许一次，二次调用抛 `InvalidOperationException`；立即按座位 0–3 产出 `SeatStateChanged`（真人座位 Online、其余 Bot；四 Bot 会话四座全 Bot），创建单根动作协程交给调度器，不推进流程。
 - `Step(tick)`：未启动抛 `InvalidOperationException`；`tick` 不大于当前 `Tick` 抛 `ArgumentOutOfRangeException`；`GameOver` 后只推进逻辑时钟（不改局面、不产事件、不处理请求）。
-- `Submit(command)`：只记录应答，不推进局面、不产事件、不推进 tick；任何非法输入/状态返回 `false` + 非空 `Reason`，不抛异常。
+- `Submit(command)`：只记录应答，不推进局面、不产事件、不推进 tick；返回 `SubmitResult`——非法输入/状态时 `Accepted = false`、`Reason` 非空、`RequestId = 0`，接受时 `RequestId` 为被应答请求 id；不抛异常。
 - `DrainEvents(viewerSeat)`：破坏性单消费者读取，同一事件不重复返回；合法 viewer 为 0–3 或 255，其他值抛 `ArgumentOutOfRangeException`（参数校验先于状态检查）；未启动或已排空返回空列表。
 - 单线程：Step/Submit/DrainEvents 不加锁、不跨线程；实例之间零共享可变状态，无静态可变字段。
 

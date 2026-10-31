@@ -82,6 +82,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-31-autoplay-and-perf-baseline.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-31-client-ui-chinese-text.md",
       "limitBytes": 8192
     },
@@ -166,6 +170,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-31-t7-budget-raise.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
@@ -203,10 +211,14 @@
     },
     {
       "path": "docs/cookbook/aot-export.md",
-      "limitBytes": 8192
+      "limitBytes": 10240
     },
     {
       "path": "docs/cookbook/build.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "docs/cookbook/play.md",
       "limitBytes": 8192
     },
     {
@@ -283,7 +295,7 @@
     },
     {
       "path": "docs/milestones/M0.2-单机可玩闭环.md",
-      "limitBytes": 12288
+      "limitBytes": 16384
     },
     {
       "path": "docs/milestones/M0.2/T-1-胡牌与七对.md",
@@ -395,7 +407,7 @@
     },
     {
       "path": "docs/reference/mutation-ledger.md",
-      "limitBytes": 34816
+      "limitBytes": 40960
     },
     {
       "path": "docs/specs/discovery.md",
@@ -423,6 +435,10 @@
     },
     {
       "path": "docs/subsystems/flow.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/subsystems/rules.md",
       "limitBytes": 10240
     },
     {

@@ -1,6 +1,6 @@
 # cookbook：AOT 导出与冒烟
 
-本页给出 Windows 空客户端 NativeAOT 导出、产物断言与冒烟步骤；一键脚本 `tools/aot-smoke/aot-smoke.ps1` 是权威实现，手动步骤与它一一对应。配方与已知坑见 [godot-aot](../reference/godot-aot.md)。
+本页给出 Windows 客户端 NativeAOT 导出、产物断言与三类独立 exe 运行（`--smoke`、`--autoplay`、GUI 启动）的步骤与阈值；一键脚本 `tools/aot-smoke/aot-smoke.ps1` 是权威实现，手动步骤与它一一对应。AOT 配方与已知坑见 [godot-aot](../reference/godot-aot.md)，客户端启动分支与标记见 [client](../subsystems/client.md)，最近一次基线与数字见 [M0.2 结果](../milestones/M0.2-单机可玩闭环.md) 的 T-7 行。
 
 ## 0. 前置自检
 
@@ -21,13 +21,24 @@
 pwsh -NoProfile -File tools/aot-smoke/aot-smoke.ps1
 ```
 
-可选参数：`-RepoRoot`（默认脚本上两级）、`-GodotExe`、`-TimeoutSeconds`（单次冒烟超时，默认 60）。
+可选参数：`-RepoRoot`（默认脚本上两级）、`-GodotExe`、`-TimeoutSeconds`（单次运行超时，默认 60；导出超时固定 900）。脚本顺序：前置自检 → 清并重建 `build/windows/` → 导出 → 复制 `content/` → 产物断言 → `--smoke` ×3 → `--autoplay` ×3 → GUI 启动 ×3。全过程写 `build/aot-smoke.log`，导出、smoke、autoplay 与 GUI 的引擎日志分别写 `build/aot-smoke-export.log`、`build/aot-smoke-run.log`、`build/aot-smoke-autoplay.log`、`build/aot-smoke-gui.log`（`--log-file` 让引擎日志落 `build/`，避免与已打开的编辑器抢 `user://` 日志文件）。
 
-脚本顺序：前置自检 → 清并重建 `build/windows/` → 导出 → 复制 `content/` → 产物断言 → 3 次 `--smoke`。
+期望末段（每行带 `[aot-smoke]` 前缀，按出现顺序）：
 
-期望 stdout 末段每次一行 `[aot-smoke] AOT STARTUP MS run=<n> value=<ms>`，随后 `[aot-smoke] AOT STARTUP MEDIAN MS value=<ms>` 与 `[aot-smoke] AOT SMOKE OK`，退出码 0；全过程写入 `build/aot-smoke.log`。
+```text
+AOT STARTUP MS run=<n> value=<ms>
+AOT STARTUP MEDIAN MS value=<ms>
+AOT AUTOPLAY READY MS run=<n> value=<ms>
+AOT AUTOPLAY TOTAL MS run=<n> value=<ms>
+AOT AUTOPLAY STARTUP MEDIAN MS value=<ms>
+AOT AUTOPLAY TOTAL MEDIAN MS value=<ms>
+AOT AUTOPLAY OK
+AOT GUI STARTUP MS run=<n> value=<ms>
+AOT GUI STARTUP MEDIAN MS value=<ms>
+AOT SMOKE OK
+```
 
-失败时打印 `[aot-smoke] FAIL: <原因>` 与导出日志末 40 行，退出 1。
+退出码 0 = 前置、导出、产物断言与三类运行全部通过；1 = 任一断言失败，原因在 `build/aot-smoke.log` 的 `FAIL: ...` 与最后一轮 stdout/stderr 里。
 
 ## 2. 手动步骤
 
@@ -46,95 +57,51 @@ New-Item -ItemType Directory <repo>/build/windows -Force | Out-Null
 & "D:\Program Files\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe" --headless --path <repo>/src/Mahjong.Client --export-release "Windows Desktop" <repo>/build/windows/Mahjong.exe
 ```
 
-期望退出码 0，输出无 `ERROR:` 行。
+期望退出码 0、输出无 `ERROR:` 行，且 `build/windows/` 下恰好一个 `data_*_windows_x86_64` 目录。
 
 3. 复制内容：先 `New-Item -ItemType Directory <repo>/build/windows/content -Force`，再把 `<repo>/content/` 整个复制进去；`rules.json`、`manifest.json` 与 6 个 `tables/*.bytes` 都要在，复制后表文件数要与源一致。
 
-4. 断言产物：数据目录 `build/windows/data_Mahjong.Client_windows_x86_64/`（`data_` + `project.godot` 的 `dotnet/project/assembly_name` + `_windows_x86_64`）内没有 `coreclr.dll`、`hostfxr.dll`、`GodotSharp.dll`，且导出的 exe 与数据文件不含 `_mcp_game_helper` 字节串（pck 内嵌在 exe 里）。
+4. 断言产物：数据目录 `build/windows/data_Mahjong.Client_windows_x86_64/`（`data_` + `project.godot` 的 `dotnet/project/assembly_name` + `_windows_x86_64`）内没有 `coreclr.dll`、`hostfxr.dll`、`GodotSharp.dll`；导出的非内容文件不含 `_mcp_game_helper` 字节串（pck 内嵌在 exe 里）。
 
-5. 冒烟：`<repo>/build/windows/Mahjong.exe --log-file <repo>/build/aot-smoke-run.log --smoke`，单次 60 秒超时；`--log-file` 把引擎日志引到 `build/`，避免与已打开的编辑器抢 `user://` 日志文件。
+5. `--smoke` ×3：`build/windows/Mahjong.exe --log-file build/aot-smoke-run.log --smoke`，单次 60 秒超时；计时终点是 stdout 首次出现 `CONTENT OK`。
 
-6. 判定：退出码 0、stderr 只出现下面「引擎噪声」的两行、stdout 含 `CONTENT OK <64 位小写 hex>`（必须等于 `content/manifest.json` 的 `contentHash`）、`TABLES OK ` 与 `M0.1 SMOKE OK`。
+6. `--autoplay` ×3：`build/windows/Mahjong.exe --log-file build/aot-smoke-autoplay.log --autoplay`，单次 60 秒超时；计时终点是 `AUTOPLAY READY` 与 `GAME OK`。
 
-7. 连跑 3 次，取「进程启动 → `CONTENT OK` 打印」的中位数，即 AOT 启动耗时；口径见 [perf-baseline-method](../../.agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md)，计时命令就在本页第 4 节。
+7. GUI 启动 ×3：`build/windows/Mahjong.exe --log-file build/aot-smoke-gui.log`（无其它参数），等 stdout 出现 `LOCAL READY`（60 秒超时）后记录 launch 耗时并结束进程，该路径退出码不参与断言；判据与 3 次取中位见 §3。
 
 ## 3. 判定口径
 
-- 通过要同时满足：退出码 0、stderr 除引擎噪声外为空、`CONTENT OK` 的 hash 与 manifest 一致、`TABLES OK` 与 `M0.1 SMOKE OK` 都出现。
-- AOT 证据是数据目录里没有三个托管运行库 dll；编辑器里跑的是 JIT Debug，不能当 AOT 证据。
-- 导出产物出现 `_mcp_game_helper` 说明 `project.godot` 的 MCP 项没剥掉，见 [run](run.md) 第 5 节。
-### 引擎噪声
+- 三类运行都要同时满足退出码（GUI 除外）、stdout 标记与 stderr 白名单；stderr 只允许 §3.1 的两行引擎噪声，多一个字节即失败。
+- `--smoke`：退出码 0；stdout 含 `CONTENT OK <64 位小写 hex>`（必须等于 `content/manifest.json` 的 `contentHash`）、`TABLES OK ` 与 `M0.1 SMOKE OK`；打印 `AOT STARTUP MS` 与中位。
+- `--autoplay`：退出码 0；stdout 恰 1 行 `AUTOPLAY READY`、恰 1 行整行 `GAME OK rounds=8`，且不出现 `LOCAL READY`（证明跳过 UI）；每次运行都断言 launch→`AUTOPLAY READY` <3000ms、launch→`GAME OK` <5000ms；3 次中位另打印。
+- GUI：整段 stdout 恰 1 行 `LOCAL READY` 且不超时；3 次中位 launch→`LOCAL READY` <3000ms；进程由脚本结束，退出码不参与断言。
+- AOT 证据是数据目录没有三个托管运行库 dll、exe 可独立跑完对局；编辑器里跑的是 JIT Debug，不能当 AOT 证据，headless JIT 墙钟只作功能验证，数字只认导出 exe 的进程墙钟（口径见 [Note 基线口径](../../.agents/notes/implemented/feature/2026-10-31-autoplay-and-perf-baseline.md)）。
 
-本机 Godot 4.7.2 导出版启动时固定向 stderr 写这两行证书库错误，与内容、AOT 与冒烟标记无关；脚本逐行精确放行，其它任何 stderr 行判失败：
+### 3.1 引擎噪声
+
+本机 Godot 4.7.2 导出版启动时固定向 stderr 写这两行证书库错误（本机 125 字节），与内容、AOT 与冒烟标记无关；脚本整段精确匹配（行尾 `\r\n`、`os_windows.cpp` 的行号按 `[0-9]+` 通配），其它任何 stderr 行判失败：
 
 ```text
 ERROR: Failed to read the root certificate store.
    at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)
 ```
 
-## 4. 基线复现
+## 4. 证据与复现
 
-三项基线按「3 个独立进程各跑一次，取各进程中位的中位」测。数字记在 [M0.1 结果](../milestones/M0.1-工程底座与内核骨架.md) 的基线表；口径与边界见 [perf-baseline-method](../../.agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md)。
+- 脚本日志与引擎日志都在 gitignored 的 `build/`；归档时把 `build/aot-smoke.log` 的 MARKER 段与各类 `value=` 行摘到 `.reviews/<任务>/evidence/`，结果页只引用结论数字。
+- 基线数字记在 [M0.2 结果](../milestones/M0.2-单机可玩闭环.md) 的 T-7 行；tick p99 与内存基准的复现见 [cookbook/build](build.md) §3；导出前先 `dotnet build Mahjong.sln -warnaserror`，CI 只跑构建/单测/门禁/钩子，AOT 冒烟在开发机跑。
 
-### tick 与查表冷加载
-
-```sh
-dotnet test Mahjong.sln --filter Category=Benchmark -l "console;verbosity=detailed"
-dotnet test Mahjong.sln --filter "FullyQualifiedName~TableColdLoadBenchmarkTests" -l "console;verbosity=detailed"
-```
-
-第一条同时打印 tick 与冷加载；第二条每进程只跑冷加载，报告注明口径。期望输出：
-
-```text
-M0.1-T5 tick bench round <n>: <ns> ns/step (<ms> ms, 1000000 steps)
-M0.1-T5 tick bench: <ns> ns/step (median of 3; total <ms> ms)
-M0.1-T6 table cold load round <n>: <ms> ms (new TableCatalog.Load)
-M0.1-T6 table cold load: <ms> ms (median of 3)
-```
-
-### AOT 启动
-
-先按 §1 或 §2 产出 `build/windows/Mahjong.exe`，再用这段 PowerShell 计时（3 个独立进程，停表在 stdout 首次出现 `CONTENT OK`，取中位）；把 `<repo>` 换成仓库根绝对路径：
-
-```powershell
-function Measure-AotStart {
-    param([string]$Exe, [string]$LogFile)
-    $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $Exe
-    $psi.Arguments = "--log-file `"$LogFile`" --smoke"
-    $psi.RedirectStandardOutput = $true
-    $psi.WorkingDirectory = Split-Path -Parent $Exe
-    $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    $process = [System.Diagnostics.Process]::Start($psi)
-    $elapsed = -1
-    while ($null -ne ($line = $process.StandardOutput.ReadLine())) {
-        if ($elapsed -lt 0 -and $line.Contains("CONTENT OK ")) { $elapsed = [int]$watch.ElapsedMilliseconds }
-    }
-    if (-not $process.WaitForExit(60000)) { $process.Kill($true); throw "timed out after 60 s" }
-    if ($elapsed -lt 0) { throw ("no CONTENT OK line; exit=" + $process.ExitCode) }
-    return $elapsed
-}
-$exe = "<repo>/build/windows/Mahjong.exe"
-$times = @()
-foreach ($run in 1..3) {
-    $ms = Measure-AotStart -Exe $exe -LogFile "<repo>/build/aot-smoke-run.log"
-    Write-Host ("run " + $run + ": " + $ms + " ms")
-    $times += $ms
-}
-Write-Host ("median: " + ($times | Sort-Object)[1] + " ms")
-```
-
-期望输出 3 行 `run <n>: <ms> ms` 与一行 `median: <ms> ms`；stderr 不重定向、噪声直接打印，判据在 §1 脚本。
 ## 5. 失败处置
 
 | 现象 | 处置 |
 |---|---|
 | 步骤 0 打印 MISSING | 按缺项装齐 SDK / Windows SDK / MSVC / Godot / 模板，或先剥掉 `project.godot` 的 MCP 项 |
 | 导出 exit 1 且日志含导出路径不存在 | 先建 `build/windows/` 再导出（第 1 步两条命令） |
-| 导出非 0 或日志有 `ERROR:` | 先 `dotnet build Mahjong.sln -warnaserror` 排除编译错误；再确认 `dotnet/project/solution_directory` 与预设名 |
+| 导出非 0 或日志有 `ERROR:` | 先 `dotnet build Mahjong.sln -warnaserror` 排除编译错误；再确认 `dotnet/project/solution_directory` 与预设名，细节看 `%APPDATA%\Godot\mono\build_logs` |
 | 数据目录出现托管 dll | 检查 `Mahjong.Client.csproj` 的 `PublishAot` 与 4 个 `TrimmerRootAssembly`，重跑导出 |
-| exe 退出 1 且 stderr 有 `M0.1 SMOKE FAILED` | 内容目录不在 exe 旁或 `content/tables` 缺失，按第 3 步补齐后重跑 |
-| 60 秒超时 | 冒烟分支没走到 30 帧退出，检查 `Startup.cs` 的 `--smoke` 分支与 `GetTree().Quit()` |
+| 导出产物含 `_mcp_game_helper` | `project.godot` 的 MCP 项没剥掉，见 [run](run.md) 第 5 节 |
+| `--smoke` 退出 1 且 stderr 有 `M0.1 SMOKE FAILED` | 内容目录不在 exe 旁或 `content/tables` 缺失，按第 3 步补齐后重跑 |
+| `--autoplay` 退出 1 或只有 `AUTOPLAY FAILED` | 看失败原因（内容加载、步数上限 1,000,000、八局校验）；`GAME OK` 不出现即失败 |
+| GUI 等不到 `LOCAL READY` | 首帧没走完（内容加载失败早退、场景/控件缺失）；看 `build/aot-smoke-gui.log` 与 stdout 末行 |
+| 60 秒超时 | 冒烟分支没走到 30 帧退出、autoplay 未收敛或 GUI 首帧未渲染，检查 `Startup`/`LocalGame` 与 `GetTree().Quit()` |
 | exe 启动即崩且无 stdout | 裁剪把 GodotSharp 的构造参数裁空，确认 4 个 `TrimmerRootAssembly` 齐全 |
-
-`.github/workflows/ci.yml` 只跑构建、单测、门禁与钩子；AOT 冒烟在开发机跑。

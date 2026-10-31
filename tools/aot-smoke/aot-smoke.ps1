@@ -20,7 +20,20 @@
          documented two-line engine certificate-store error (case-sensitive whole-text match,
          fixed order); record the time from process start to the CONTENT OK line and print
          the median.
-      7. On any failure print the export log tail plus the last stdout/stderr and exit 1.
+      7. Run Mahjong.exe --autoplay three times, 60 s timeout per run by default. Assert exit
+         code 0, the same stderr whitelist, stdout contains AUTOPLAY READY exactly once and the
+         whole line "GAME OK rounds=8" exactly once, and stdout never contains LOCAL READY
+         (--autoplay must not load the UI). Record launch-to-AUTOPLAY READY and launch-to-GAME OK
+         milliseconds; assert startup below 3000 and total below 5000 per run; print
+         "AOT AUTOPLAY READY MS run=<n> value=<ms>" and "AOT AUTOPLAY TOTAL MS run=<n> value=<ms>"
+         and the two medians.
+      8. Run Mahjong.exe as a normal GUI startup three times; wait for the LOCAL READY stdout line
+         (60 s timeout), record launch-to-LOCAL READY, then kill the process. Assert the whole
+         captured stdout contains exactly one LOCAL READY line and no timeout, and the median is
+         below 3000 ms; print "AOT GUI STARTUP MS run=<n> value=<ms>" and its median.
+      9. Print the AOT AUTOPLAY OK summary line right after the autoplay step; the last line,
+         after the GUI step, is AOT SMOKE OK.
+      10. On any failure print the export log tail plus the last stdout/stderr and exit 1.
 
     The script and its markers are ASCII only. Exit code 0 means every assertion passed.
 
@@ -31,7 +44,7 @@
     Godot 4.7.2 mono console executable used for the headless export.
 
 .PARAMETER TimeoutSeconds
-    Timeout in seconds for one --smoke run.
+    Timeout in seconds for one process run: --smoke, --autoplay or GUI startup.
 #>
 [CmdletBinding()]
 param(
@@ -52,6 +65,11 @@ $script:ContentDir = Join-Path $script:RepoRoot 'content'
 $script:LogPath = Join-Path $script:BuildDir 'aot-smoke.log'
 $script:ExportLogPath = Join-Path $script:BuildDir 'aot-smoke-export.log'
 $script:SmokeLogPath = Join-Path $script:BuildDir 'aot-smoke-run.log'
+$script:AutoplayLogPath = Join-Path $script:BuildDir 'aot-smoke-autoplay.log'
+$script:GuiLogPath = Join-Path $script:BuildDir 'aot-smoke-gui.log'
+$script:AutoplayStartupLimitMs = 3000
+$script:AutoplayTotalLimitMs = 5000
+$script:GuiStartupLimitMs = 3000
 $script:ExportTimeoutSeconds = 900
 $script:RunCount = 3
 $script:AsciiNeedle = '_mcp_game_helper'
@@ -155,6 +173,274 @@ function New-GodotProcessStartInfo {
     }
 
     return $psi
+}
+
+function Invoke-AutoplayRun {
+    param(
+        [int]$Run,
+        [string]$ExePath,
+        [string]$WorkingDirectory,
+        [string]$LogFilePath,
+        [int]$TimeoutSeconds,
+        [string]$StderrPattern,
+        [int]$StartupLimitMs,
+        [int]$TotalLimitMs
+    )
+
+    # --log-file keeps the engine log out of the user:// profile shared with an open editor.
+    $psi = New-GodotProcessStartInfo -FileName $ExePath -WorkingDirectory $WorkingDirectory -Arguments @(
+        '--log-file', $LogFilePath,
+        '--autoplay'
+    )
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    $readyMs = -1
+    $totalMs = -1
+    $timedOut = $false
+
+    try {
+        $lineTask = $process.StandardOutput.ReadLineAsync()
+        while ($true) {
+            $remaining = ($TimeoutSeconds * 1000) - [int]$stopwatch.ElapsedMilliseconds
+            if ($remaining -le 0) {
+                $timedOut = $true
+                break
+            }
+
+            $finished = $lineTask.Wait($remaining)
+            if (-not $finished) {
+                $timedOut = $true
+                break
+            }
+
+            $line = $lineTask.Result
+            if ($null -eq $line) {
+                break
+            }
+
+            $lines.Add($line)
+            if ($readyMs -lt 0 -and $line -ceq 'AUTOPLAY READY') {
+                $readyMs = [int]$stopwatch.ElapsedMilliseconds
+            }
+
+            if ($totalMs -lt 0 -and $line -cmatch '^GAME OK rounds=8$') {
+                $totalMs = [int]$stopwatch.ElapsedMilliseconds
+            }
+
+            $lineTask = $process.StandardOutput.ReadLineAsync()
+        }
+    }
+    finally {
+        if ($timedOut) {
+            try {
+                $process.Kill($true)
+            }
+            catch {
+            }
+        }
+    }
+
+    [void]$process.WaitForExit(5000)
+    $stdoutText = ($lines -join "`n")
+    $stderrText = ''
+    try {
+        $stderrText = $stderrTask.GetAwaiter().GetResult()
+    }
+    catch {
+        $stderrText = ''
+    }
+
+    $script:_lastStdout = $stdoutText
+    $script:_lastStderr = $stderrText
+    $exitCode = -1
+    if ($process.HasExited) {
+        $exitCode = $process.ExitCode
+    }
+
+    Write-Log ('autoplay run ' + $Run + ': exit=' + $exitCode + ' timedOut=' + $timedOut + ' readyMs=' + $readyMs + ' totalMs=' + $totalMs + ' stdoutLines=' + $lines.Count + ' stderrBytes=' + $stderrText.Length)
+    foreach ($stdoutLine in $lines) {
+        Write-Log ('  stdout | ' + $stdoutLine)
+    }
+
+    foreach ($stderrLine in ($stderrText -split "`r?`n")) {
+        if ($stderrLine.Length -gt 0) {
+            Write-Log ('  stderr | ' + $stderrLine)
+        }
+    }
+
+    if ($timedOut) {
+        Stop-Smoke ('autoplay run ' + $Run + ' timed out after ' + $TimeoutSeconds + ' s')
+    }
+
+    if ($exitCode -ne 0) {
+        Stop-Smoke ('autoplay run ' + $Run + ' exited with code ' + $exitCode)
+    }
+
+    if ($stderrText.Length -gt 0) {
+        if (-not ($stderrText -cmatch $StderrPattern)) {
+            Stop-Smoke ('autoplay run ' + $Run + ' wrote ' + $stderrText.Length + ' stderr byte(s) that are not exactly the documented two-line certificate-store error')
+        }
+
+        Write-Log ('engine-stderr: matched the documented two-line certificate-store error exactly (' + $stderrText.Length + ' byte(s))')
+    }
+
+    if ($readyMs -lt 0) {
+        Stop-Smoke ('autoplay run ' + $Run + ' never printed AUTOPLAY READY')
+    }
+
+    if ($totalMs -lt 0) {
+        Stop-Smoke ('autoplay run ' + $Run + ' never printed the whole line "GAME OK rounds=8"')
+    }
+
+    $readyCount = @($lines | Where-Object { $_ -ceq 'AUTOPLAY READY' }).Count
+    if ($readyCount -ne 1) {
+        Stop-Smoke ('autoplay run ' + $Run + ' printed AUTOPLAY READY ' + $readyCount + ' time(s), expected exactly 1')
+    }
+
+    $gameOkCount = @($lines | Where-Object { $_ -cmatch '^GAME OK rounds=8$' }).Count
+    if ($gameOkCount -ne 1) {
+        Stop-Smoke ('autoplay run ' + $Run + ' printed "GAME OK rounds=8" ' + $gameOkCount + ' time(s), expected exactly 1')
+    }
+
+    $localReadyCount = @($lines | Where-Object { $_ -ceq 'LOCAL READY' }).Count
+    if ($localReadyCount -ne 0) {
+        Stop-Smoke ('autoplay run ' + $Run + ' printed LOCAL READY; --autoplay must skip the UI')
+    }
+
+    if ($readyMs -ge $StartupLimitMs) {
+        Stop-Smoke ('autoplay run ' + $Run + ' startup ' + $readyMs + ' ms is not below ' + $StartupLimitMs + ' ms')
+    }
+
+    if ($totalMs -ge $TotalLimitMs) {
+        Stop-Smoke ('autoplay run ' + $Run + ' total ' + $totalMs + ' ms is not below ' + $TotalLimitMs + ' ms')
+    }
+
+    Write-Log ('AOT AUTOPLAY READY MS run=' + $Run + ' value=' + $readyMs)
+    Write-Log ('AOT AUTOPLAY TOTAL MS run=' + $Run + ' value=' + $totalMs)
+    return @{ ReadyMs = $readyMs; TotalMs = $totalMs }
+}
+
+function Invoke-GuiStartupRun {
+    param(
+        [int]$Run,
+        [string]$ExePath,
+        [string]$WorkingDirectory,
+        [string]$LogFilePath,
+        [int]$TimeoutSeconds
+    )
+
+    # No arguments besides --log-file: this is the normal GUI startup path that must reach the first
+    # fully processed frame and print LOCAL READY exactly once.
+    $psi = New-GodotProcessStartInfo -FileName $ExePath -WorkingDirectory $WorkingDirectory -Arguments @(
+        '--log-file', $LogFilePath
+    )
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    $readyMs = -1
+    $timedOut = $false
+
+    try {
+        $lineTask = $process.StandardOutput.ReadLineAsync()
+        while ($true) {
+            $remaining = ($TimeoutSeconds * 1000) - [int]$stopwatch.ElapsedMilliseconds
+            if ($remaining -le 0) {
+                $timedOut = $true
+                break
+            }
+
+            $finished = $lineTask.Wait($remaining)
+            if (-not $finished) {
+                $timedOut = $true
+                break
+            }
+
+            $line = $lineTask.Result
+            if ($null -eq $line) {
+                break
+            }
+
+            $lines.Add($line)
+            if ($line -ceq 'LOCAL READY') {
+                $readyMs = [int]$stopwatch.ElapsedMilliseconds
+                break
+            }
+
+            $lineTask = $process.StandardOutput.ReadLineAsync()
+        }
+    }
+    finally {
+        if (-not $process.HasExited) {
+            try {
+                $process.Kill($true)
+            }
+            catch {
+            }
+        }
+    }
+
+    [void]$process.WaitForExit(5000)
+
+    # Collect stdout still buffered after the kill so the whole-text uniqueness check sees it.
+    $tail = ''
+    try {
+        $tail = $process.StandardOutput.ReadToEnd()
+    }
+    catch {
+        $tail = ''
+    }
+
+    foreach ($tailLine in ($tail -split "`r?`n")) {
+        if ($tailLine.Length -gt 0) {
+            $lines.Add($tailLine)
+        }
+    }
+
+    $stdoutText = ($lines -join "`n")
+    $stderrText = ''
+    try {
+        $stderrText = $stderrTask.GetAwaiter().GetResult()
+    }
+    catch {
+        $stderrText = ''
+    }
+
+    $script:_lastStdout = $stdoutText
+    $script:_lastStderr = $stderrText
+    $exitCode = -1
+    if ($process.HasExited) {
+        $exitCode = $process.ExitCode
+    }
+
+    Write-Log ('gui run ' + $Run + ': exit=' + $exitCode + ' timedOut=' + $timedOut + ' localReadyMs=' + $readyMs + ' stdoutLines=' + $lines.Count + ' stderrBytes=' + $stderrText.Length)
+    foreach ($stdoutLine in $lines) {
+        Write-Log ('  stdout | ' + $stdoutLine)
+    }
+
+    foreach ($stderrLine in ($stderrText -split "`r?`n")) {
+        if ($stderrLine.Length -gt 0) {
+            Write-Log ('  stderr | ' + $stderrLine)
+        }
+    }
+
+    if ($timedOut) {
+        Stop-Smoke ('gui run ' + $Run + ' timed out after ' + $TimeoutSeconds + ' s waiting for LOCAL READY')
+    }
+
+    if ($readyMs -lt 0) {
+        Stop-Smoke ('gui run ' + $Run + ' never printed LOCAL READY (exit=' + $exitCode + ')')
+    }
+
+    $localReadyCount = @($lines | Where-Object { $_ -ceq 'LOCAL READY' }).Count
+    if ($localReadyCount -ne 1) {
+        Stop-Smoke ('gui run ' + $Run + ' printed LOCAL READY ' + $localReadyCount + ' time(s), expected exactly 1')
+    }
+
+    Write-Log ('AOT GUI STARTUP MS run=' + $Run + ' value=' + $readyMs)
+    return @{ ReadyMs = $readyMs }
 }
 
 Write-Log ('repo root: ' + $script:RepoRoot)
@@ -534,5 +820,41 @@ for ($run = 1; $run -le $script:RunCount; $run++) {
 $sortedTimings = @($timings | Sort-Object)
 $median = $sortedTimings[[int][Math]::Floor($sortedTimings.Count / 2)]
 Write-Log ('AOT STARTUP MEDIAN MS value=' + $median)
+
+# ---------------------------------------------------------------- step 7
+Write-Log ('step 7: run --autoplay ' + $script:RunCount + ' time(s), timeout ' + $TimeoutSeconds + ' s per run')
+$autoplayReadyTimings = New-Object 'System.Collections.Generic.List[int]'
+$autoplayTotalTimings = New-Object 'System.Collections.Generic.List[int]'
+
+for ($run = 1; $run -le $script:RunCount; $run++) {
+    $result = Invoke-AutoplayRun -Run $run -ExePath $script:ExePath -WorkingDirectory $script:WindowsDir -LogFilePath $script:AutoplayLogPath -TimeoutSeconds $TimeoutSeconds -StderrPattern $script:EngineStderrPattern -StartupLimitMs $script:AutoplayStartupLimitMs -TotalLimitMs $script:AutoplayTotalLimitMs
+    $autoplayReadyTimings.Add([int]$result.ReadyMs)
+    $autoplayTotalTimings.Add([int]$result.TotalMs)
+}
+
+$sortedAutoplayReady = @($autoplayReadyTimings | Sort-Object)
+$autoplayReadyMedian = $sortedAutoplayReady[[int][Math]::Floor($sortedAutoplayReady.Count / 2)]
+$sortedAutoplayTotal = @($autoplayTotalTimings | Sort-Object)
+$autoplayTotalMedian = $sortedAutoplayTotal[[int][Math]::Floor($sortedAutoplayTotal.Count / 2)]
+Write-Log ('AOT AUTOPLAY STARTUP MEDIAN MS value=' + $autoplayReadyMedian)
+Write-Log ('AOT AUTOPLAY TOTAL MEDIAN MS value=' + $autoplayTotalMedian)
+Write-Log 'AOT AUTOPLAY OK'
+
+# ---------------------------------------------------------------- step 8
+Write-Log ('step 8: GUI startup ' + $script:RunCount + ' time(s), wait for LOCAL READY, timeout ' + $TimeoutSeconds + ' s per run')
+$guiTimings = New-Object 'System.Collections.Generic.List[int]'
+
+for ($run = 1; $run -le $script:RunCount; $run++) {
+    $result = Invoke-GuiStartupRun -Run $run -ExePath $script:ExePath -WorkingDirectory $script:WindowsDir -LogFilePath $script:GuiLogPath -TimeoutSeconds $TimeoutSeconds
+    $guiTimings.Add([int]$result.ReadyMs)
+}
+
+$sortedGui = @($guiTimings | Sort-Object)
+$guiMedian = $sortedGui[[int][Math]::Floor($sortedGui.Count / 2)]
+Write-Log ('AOT GUI STARTUP MEDIAN MS value=' + $guiMedian)
+if ($guiMedian -ge $script:GuiStartupLimitMs) {
+    Stop-Smoke ('GUI startup median ' + $guiMedian + ' ms is not below ' + $script:GuiStartupLimitMs + ' ms')
+}
+
 Write-Log 'AOT SMOKE OK'
 exit 0

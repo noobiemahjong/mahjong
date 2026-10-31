@@ -4,7 +4,7 @@
 
 ## 1. 这个项目是什么
 
-四人麻将（单机 / 局域网 / 公网房间），Godot 4.7.2 + C#（net10）重写；进度与任务状态以 [里程碑索引](milestones/README.md) 与各阶段任务表为准，当前还没有可玩的牌局。
+四人麻将（单机 / 局域网 / 公网房间），Godot 4.7.2 + C#（net10）重写；单机 1 真人 + 3 Bot 的 8 局闭环可玩（[怎么玩一局](cookbook/play.md)），进度与任务状态以 [里程碑索引](milestones/README.md) 与各阶段任务表为准。
 
 ## 2. 环境
 
@@ -32,7 +32,7 @@ pwsh -File tools/git-hooks/tests/run.ps1     # 钩子自检
 pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 ````
 
-命令的期望输出、退出码与失败处置见 [cookbook/build](cookbook/build.md)；运行客户端见 [cookbook/run](cookbook/run.md)，AOT 导出与冒烟见 [cookbook/aot-export](cookbook/aot-export.md)。
+命令的期望输出、退出码与失败处置见 [cookbook/build](cookbook/build.md)；运行客户端见 [cookbook/run](cookbook/run.md)，玩一局见 [cookbook/play](cookbook/play.md)，AOT 导出与冒烟见 [cookbook/aot-export](cookbook/aot-export.md)。
 
 ## 4. 读文档顺序
 
@@ -66,6 +66,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 |---|---|
 | 当前代码怎么跑 | [architecture.md](architecture.md) |
 | 构建/运行/导出的具体命令 | [cookbook](cookbook/build.md) |
+| 怎么启动、操作、重开一局 | [cookbook/play](cookbook/play.md) |
 | 目标设计/约束 | [DESIGN.md](DESIGN.md) |
 | 为什么做这个选择 | [.agents/notes/](../.agents/notes/README.md) |
 | 当前里程碑/任务状态 | [milestones/README.md](milestones/README.md) |

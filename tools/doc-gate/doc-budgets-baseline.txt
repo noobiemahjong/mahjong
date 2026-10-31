@@ -18,6 +18,7 @@
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md	8192
+.agents/notes/implemented/feature/2026-10-31-autoplay-and-perf-baseline.md	8192
 .agents/notes/implemented/feature/2026-10-31-client-ui-chinese-text.md	8192
 .agents/notes/implemented/feature/2026-10-31-godot-minimal-loop.md	8192
 .agents/notes/implemented/feature/2026-10-31-local-game-session.md	8192
@@ -39,6 +40,7 @@
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t5.md	8192
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t6.md	8192
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise.md	8192
+.agents/notes/implemented/process/2026-10-31-t7-budget-raise.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
@@ -48,8 +50,9 @@ docs/AGENTS.md	6144
 docs/DESIGN.md	65536
 docs/TABLES.md	16384
 docs/architecture.md	8192
-docs/cookbook/aot-export.md	8192
+docs/cookbook/aot-export.md	10240
 docs/cookbook/build.md	8192
+docs/cookbook/play.md	8192
 docs/cookbook/run.md	8192
 docs/development.md	8192
 docs/engineering/README.md	4096
@@ -68,7 +71,7 @@ docs/milestones/M0.1/T-3-内容与查表.md	10240
 docs/milestones/M0.1/T-4-牌与区域模型.md	10240
 docs/milestones/M0.1/T-5-tick引擎.md	10240
 docs/milestones/M0.1/T-6-基线收口.md	10240
-docs/milestones/M0.2-单机可玩闭环.md	12288
+docs/milestones/M0.2-单机可玩闭环.md	16384
 docs/milestones/M0.2/T-1-胡牌与七对.md	10240
 docs/milestones/M0.2/T-1b-单牌墙与发牌修正.md	10240
 docs/milestones/M0.2/T-2-技能与响应.md	10240
@@ -96,7 +99,7 @@ docs/postmortem/README.md	4096
 docs/reference/README.md	4096
 docs/reference/game-event-engine.md	8192
 docs/reference/godot-aot.md	8192
-docs/reference/mutation-ledger.md	34816
+docs/reference/mutation-ledger.md	40960
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240
@@ -104,6 +107,7 @@ docs/subsystems/bot.md	10240
 docs/subsystems/client.md	10240
 docs/subsystems/core.md	10240
 docs/subsystems/flow.md	10240
+docs/subsystems/rules.md	10240
 docs/subsystems/scoring.md	10240
 docs/subsystems/session.md	10240
 src/AGENTS.md	4096

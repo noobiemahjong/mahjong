@@ -1,6 +1,6 @@
 # cookbook：运行客户端
 
-本页给出用 Godot 编辑器打开 `src/Mahjong.Client` 并运行 `Startup.tscn` 的编号步骤、期望输出与 MCP 插件注意点；构建前置见 [build](build.md)，导出产物运行见 [aot-export](aot-export.md)。
+本页给出用 Godot 编辑器打开 `src/Mahjong.Client` 并运行 `Startup.tscn` 的编号步骤、期望输出与 MCP 插件注意点；对局操作、结算与重开见 [play](play.md)；构建前置见 [build](build.md)，导出产物运行见 [aot-export](aot-export.md)。
 
 ## 0. 前置
 
@@ -22,20 +22,11 @@ Godot 标准版（非 mono）跑不了 C# 工程；缺 .NET 版时先装，编�
 
 1. FileSystem 面板双击 `res://Startup.tscn`：工程主场景，`application/run/main_scene` 已指向它，根节点 `Startup` 挂 `Startup.cs`。
 2. 按 F5（Run Project）或点右上角 ▶。
-3. 期望 Output 打印 `M0.1 START`，随后自动切到 `res://LocalGame.tscn`：1280×720 中文牌桌，Info 首行 `第 n/8 局  余牌 w  你 score`、第二行状态提示，四家区域、自己手牌与 Actions 按钮（出牌/碰/杠/胡/过）可见。
+3. 期望 Output 打印 `M0.1 START`，随后自动切到 `res://LocalGame.tscn`：1280×720 中文牌桌与对局信息可见，操作方式见 [play](play.md) 第 3 节。
 4. 停止：F8 或工具栏停止按钮；对局中也可点 `返回` 退出进程。
 5. 中文由 `SystemFont` 运行时回退渲染，依赖操作系统 CJK 字体；随包终版字体归 M4。
 
-## 3. 本地对局操作
-
-1. 轮到自己且状态行为 `轮到你 - 请选择一张牌` 时点手牌选中（黄色边框），再点同一张或点 `出牌` 出牌。
-2. 出现可点的 `碰/杠/胡/过` 时点对应按钮；禁用按钮不可点；响应窗口状态行为 `响应窗口 - 碰/杠/过` 或 `响应窗口 - 过`。
-3. 一局结束弹 `第 n 局结束`：`继续` 继续，`重开` 用新 seed 重开，`返回` 退出。
-4. 8 局结束弹 `牌局结束`：四家总分与 `第1名`…`第4名` 名次；`重开`/`返回` 可用，`继续` 不可见。
-5. 重开次数 `restartCount` 递增、seed = 20261031 + restartCount，同一重开次数对局可复现。
-6. 结算层标题与正文为中文（`流局`/`赢家 {名}`、`动作 {动作名}`、`{名} ±n  总分 ±n`）。
-
-## 4. 普通启动与 --smoke 的差异
+## 3. 普通启动与 --smoke 的差异
 
 | 模式 | 触发 | stdout | 退出 |
 |---|---|---|---|
@@ -52,13 +43,13 @@ Godot 标准版（非 mono）跑不了 C# 工程；缺 .NET 版时先装，编�
 
 编辑器内试冒烟可在 Project Settings → Editor → Run → Main Run Args 填 `--smoke`，用完清空，避免把本机调试参数写进 `project.godot`。
 
-## 5. 内容目录怎么找
+## 4. 内容目录怎么找
 
 `ContentPaths.Resolve()` 依次尝试：环境变量 `MAHJONG_CONTENT_DIR`（设了但目录不存在时直接报错，不回退）→ 可执行文件旁的 `content/` → 从当前工作目录逐级向上找 `content/`，遇到含 `global.json` 或 `.git` 的目录即停。
 
 普通启动进对局与 `--smoke` 都走这条解析；编辑器里工作目录是工程目录，向上命中仓库根 `content/`；导出产物则把 `content/` 复制到 exe 旁边（见 [aot-export](aot-export.md)）。要指向别的内容根，设 `MAHJONG_CONTENT_DIR`。
 
-## 6. MCP 插件注意点
+## 5. MCP 插件注意点
 
 `src/Mahjong.Client/addons/godot_ai/` 被 [.gitignore](../../.gitignore) 忽略，只在装了 Godot MCP 的本机存在；插件启用项与 `[autoload] _mcp_game_helper` 写进 `project.godot` 后属本机状态，入库前要剥掉，理由见 [Note](../../.agents/notes/implemented/process/2026-10-29-godot-mcp-plugin-not-tracked.md)。
 

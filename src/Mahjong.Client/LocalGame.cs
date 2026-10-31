@@ -58,6 +58,7 @@ public partial class LocalGame : Control
     private ushort? _selectedTileId;
     private bool _paused;
     private bool _gameOver;
+    private bool _localReadyPrinted;
     private string _lastAction = "发牌中";
 
     /// <summary>取节点、加载内容与查表并启动第一局；内容失败打印原因并以 1 退出。</summary>
@@ -139,6 +140,13 @@ public partial class LocalGame : Control
         RegisterOverlayButtons();
         DrainPointers();
         AdvanceSession(delta);
+
+        // 首帧：投影/渲染/登记/排空/推进都完整走完才视为已到可操作状态；整进程只打印一次。
+        if (!_localReadyPrinted)
+        {
+            _localReadyPrinted = true;
+            GD.Print("LOCAL READY");
+        }
     }
 
     /// <summary>选中牌已不在手牌里（超时托管自动出牌、被碰/杠等）时清空选中，避免按钮亮着却提交无效。</summary>

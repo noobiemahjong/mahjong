@@ -37,9 +37,11 @@ New-Item -ItemType Directory "$repo/build/windows" -Force | Out-Null   # 导出�
 # 冒烟前把 content/ 复制到 "$repo/build/windows/content/"（见 cookbook/aot-export 第 2 节）
 # --log-file 必须给：编辑器开着时不加会多出 user:// 日志写入错误，stderr 判据随之失效
 & "$repo/build/windows/Mahjong.exe" --log-file "$repo/build/aot-smoke-run.log" --smoke
+& "$repo/build/windows/Mahjong.exe" --log-file "$repo/build/aot-smoke-autoplay.log" --autoplay
+& "$repo/build/windows/Mahjong.exe" --log-file "$repo/build/aot-smoke-gui.log"
 ````
 
-期望：stdout 含 `CONTENT OK <contentHash>`、`TABLES OK ...` 与 `M0.1 SMOKE OK`，退出 0；stderr 只允许本机 Godot 导出版固定打印的证书库错误两行，其它 stderr 行判失败（见 cookbook 的「引擎噪声」节）。导出数据目录名是 `data_<assembly_name>_windows_x86_64/`：按 `project.godot` 的 `dotnet/project/assembly_name` 命名，本机为 `data_Mahjong.Client_windows_x86_64/`，不按 exe 名。
+期望：`--smoke` 的 stdout 含 `CONTENT OK <contentHash>`、`TABLES OK ...` 与 `M0.1 SMOKE OK` 后退出 0；`--autoplay` 的 stdout 含 `AUTOPLAY READY` 与整行 `GAME OK rounds=8` 后退出 0；无参数 GUI 启动在首帧完整渲染后打印一次 `LOCAL READY` 并常驻。三类运行 stderr 都只允许本机 Godot 导出版固定打印的证书库错误两行，其它 stderr 行判失败（见 cookbook 的「引擎噪声」节）；计时口径与阈值见 cookbook 的「判定口径」。导出数据目录名是 `data_<assembly_name>_windows_x86_64/`：按 `project.godot` 的 `dotnet/project/assembly_name` 命名，本机为 `data_Mahjong.Client_windows_x86_64/`，不按 exe 名。
 
 ## 已知坑
 

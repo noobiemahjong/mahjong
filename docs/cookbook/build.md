@@ -33,7 +33,27 @@ dotnet test Mahjong.sln
 
 失败处置：`dotnet test Mahjong.sln --filter FullyQualifiedName~<类名>` 缩到单类；`-l "console;verbosity=detailed"` 展开用例输出；只跑基准组用 `--filter Category=Benchmark`（口径见 [perf-baseline-method](../../.agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md)）。
 
-## 3. 文档门禁（L2）
+## 3. 基准（L2）
+
+```sh
+dotnet test Mahjong.sln --filter Category=Benchmark -l "console;verbosity=detailed"
+```
+
+期望：5 个基准用例全部通过、退出码 0；每个用例在 `标准输出消息` 下打印自己的基准行，T-7 的两组是：
+
+```text
+M0.2-T7 tick p99 round <n>: p50=<ns> p99=<ns> p99.9=<ns> ns (1000000 steps)
+M0.2-T7 tick p99: <ns> ns (median of 3 rounds; threshold 1000000 ns)
+M0.2-T7 memory: game1Peak=<bytes> game2Peak=<bytes> growth=<bytes> allowance=<bytes> workingSet=<bytes>
+```
+
+判据：tick 基准三轮各自断言 `p99 < 1000000` ns，内存基准断言 `game2Peak <= game1Peak + allowance`；任一超限用例变红、退出码非 0。两个口径（p99 单步含两次 `Stopwatch.GetTimestamp` 开销故为步耗时上界、内存只含托管堆采样峰值不含引擎）见 [Note 基线口径](../../.agents/notes/implemented/feature/2026-10-31-autoplay-and-perf-baseline.md)。
+
+单跑一组用 `--filter FullyQualifiedName~TickEngineP99BenchmarkTests` 或 `~FourBotsMemoryBenchmarkTests`；基准用例同属 `[Collection("benchmark")]`，与既有 tick/冷加载基准串行，同进程内不要并发跑第二份 `dotnet test`，否则耗时与峰值不可比。
+
+失败处置：p99 超限先排除机器负载（并行构建、另一份测试、GC 抖动）再查调度器改动；内存超限查新增静态缓存与未置空的会话引用，允许额度为 `game1Peak / 4 + 4 MiB`。
+
+## 4. 文档门禁（L2）
 
 ```sh
 pwsh -NoProfile -File tools/doc-gate/doc-gate.ps1 -Fail
@@ -43,7 +63,7 @@ pwsh -NoProfile -File tools/doc-gate/doc-gate.ps1 -Fail
 
 失败处置：按 G 编号查 [docs/AGENTS.md](../AGENTS.md) 门禁表；预算类 G7 先下沉迁移、再精简、最后才提额；改门禁规则要同批改夹具与规则表。
 
-## 4. 门禁夹具自检（L2）
+## 5. 门禁夹具自检（L2）
 
 ```sh
 pwsh -NoProfile -File tools/doc-gate/tests/run.ps1
@@ -53,7 +73,7 @@ pwsh -NoProfile -File tools/doc-gate/tests/run.ps1
 
 失败处置：夹具扫描根必须自带最小合法 `doc-budgets.json` 与 `doc-budgets-baseline.txt`；新增夹具按 [doc-gate README](../../tools/doc-gate/README.md) 的「夹具」节加 bad/good 根与用例行。
 
-## 5. commit-msg 钩子自检（L2）
+## 6. commit-msg 钩子自检（L2）
 
 ```sh
 git config core.hooksPath tools/git-hooks
@@ -64,7 +84,7 @@ pwsh -NoProfile -File tools/git-hooks/tests/run.ps1
 
 失败处置：钩子由 Git 自带 `sh` 执行，`git --exec-path` 异常的 Git for Windows 会整体失败；钩子规则见 [git-hooks README](../../tools/git-hooks/README.md)。
 
-## 6. 一次跑完
+## 7. 一次跑完
 
 ```sh
 dotnet build Mahjong.sln -warnaserror && dotnet test Mahjong.sln && pwsh -NoProfile -File tools/doc-gate/doc-gate.ps1 -Fail && pwsh -NoProfile -File tools/git-hooks/tests/run.ps1

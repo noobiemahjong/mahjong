@@ -41,6 +41,7 @@
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise-t6.md	8192
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-t7-budget-raise.md	8192
+.agents/notes/implemented/process/2026-10-31-team-taskbook-migration.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
@@ -115,3 +116,7 @@ tools/AGENTS.md	4096
 tools/aot-smoke/README.md	4096
 tools/doc-gate/README.md	4096
 tools/git-hooks/README.md	4096
+tools/team-taskbook/README.md	4096
+tools/team-taskbook/templates/batch-contract.md	8192
+tools/team-taskbook/templates/cell-brief.md	10240
+tools/team-taskbook/templates/lead-brief.md	20480

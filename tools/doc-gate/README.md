@@ -46,7 +46,7 @@ doc-gate: OK|FAIL
 
 ## 扫描排除
 
-跳过路径任一段为 `.git`、`content`、`lib`、`bin`、`obj`、`build`、`addons` 的目录，并跳过相对前缀 `tools/doc-gate/tests/fixtures/`。`addons` 是 Godot 插件的 vendor 内容，不属本仓文档标准；夹具目录里的文档必须能保持「红」，不能参与仓库自检。
+跳过路径任一段为 `.git`、`content`、`lib`、`bin`、`obj`、`build`、`addons`、`.agent-work` 的目录，并跳过相对前缀 `tools/doc-gate/tests/fixtures/`。`addons` 是 Godot 插件的 vendor 内容，不属本仓文档标准；夹具目录里的文档必须能保持「红」，不能参与仓库自检。
 
 ## 夹具
 

@@ -21,7 +21,7 @@
 | `docs/` | 文档：tier 与写法见 [docs/AGENTS.md](docs/AGENTS.md) |
 | `.agents/notes/` | 决策记录（Problem / Decision / Alternatives / Consequences）；规则见 [README](.agents/notes/README.md) |
 | `content/tables/` | 6 个查表 `.bytes`，v1 唯一事实来源；见 [TABLES](docs/TABLES.md) |
-| `tools/` | doc-gate、查表工具等；规则见 [tools/AGENTS.md](tools/AGENTS.md) |
+| `tools/` | doc-gate、查表、团队任务书等；规则见 [tools/AGENTS.md](tools/AGENTS.md) |
 | `docs/legacy/` | 旧 Unity 项目历史资料，仅素材参考 |
 
 ## 常驻规矩

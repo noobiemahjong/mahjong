@@ -174,6 +174,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-10-31-team-taskbook-migration.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
@@ -468,6 +472,22 @@
     {
       "path": "tools/git-hooks/README.md",
       "limitBytes": 4096
+    },
+    {
+      "path": "tools/team-taskbook/README.md",
+      "limitBytes": 4096
+    },
+    {
+      "path": "tools/team-taskbook/templates/batch-contract.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": "tools/team-taskbook/templates/cell-brief.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "tools/team-taskbook/templates/lead-brief.md",
+      "limitBytes": 20480
     }
   ]
 }

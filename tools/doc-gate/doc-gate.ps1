@@ -91,7 +91,7 @@ function Test-ExcludedPath {
     param([string]$Rel)
     $parts = $Rel.Split('/')
     for ($i = 0; $i -lt ($parts.Length - 1); $i++) {
-        foreach ($seg in @('.git', 'content', 'lib', 'bin', 'obj', 'build', 'addons')) {
+        foreach ($seg in @('.git', 'content', 'lib', 'bin', 'obj', 'build', 'addons', '.agent-work')) {
             if ([string]::Equals($parts[$i], $seg, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
         }
     }

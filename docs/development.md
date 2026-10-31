@@ -66,6 +66,8 @@ curl -s -X POST http://localhost:3011/SDK/ -H "Content-Type: application/json" \
 ## 团队与委派
 
 - 开工前在共享任务板建任务，写清**写作用域（目录级）**；并行任务作用域不重叠。
+- 批次型任务用团队任务书：[tools/team-taskbook](../tools/team-taskbook/README.md)（Lead 标准 + 契约/单元模板；小改动不用）。
+- 批次内按 [team-taskbook/templates/lead-brief.md](../tools/team-taskbook/templates/lead-brief.md) §5 检查点执行（规划确认 + 异常拍板 + 完成后汇报），不逐单元等确认。
 - 子任务书必须含：MCP 条款、载体（改哪些目录）、交付物、验收命令、停止条件。
 - **一单元一产物**：默认单单元 ≤80 步 / ≤150K token；批次 ≤8；同时活跃 ≤5。
 - Lead 复核最终 diff、跑 L1/L2、确认无越界；**不 push**。

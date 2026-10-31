@@ -11,3 +11,4 @@ src/Mahjong.Client/content/
 .mcp/
 *.uid
 src/Mahjong.Client/addons/godot_ai/
+.agent-work/

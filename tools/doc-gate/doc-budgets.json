@@ -82,6 +82,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/feature/2026-10-31-simple-bot-policy.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/process/2026-10-28-design-baseline-and-change-procedure.md",
       "limitBytes": 8192
     },
@@ -135,6 +139,10 @@
     },
     {
       "path": ".agents/notes/implemented/process/2026-10-30-subsystem-page-budget-raise.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise.md",
       "limitBytes": 8192
     },
     {
@@ -367,7 +375,7 @@
     },
     {
       "path": "docs/reference/mutation-ledger.md",
-      "limitBytes": 8192
+      "limitBytes": 16384
     },
     {
       "path": "docs/specs/discovery.md",
@@ -379,6 +387,10 @@
     },
     {
       "path": "docs/specs/replay-format.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/subsystems/bot.md",
       "limitBytes": 10240
     },
     {

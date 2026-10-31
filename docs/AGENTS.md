@@ -63,7 +63,7 @@
 | `docs/legacy/**` | 64 KB |
 | 各级 `README.md` / 模板 / `CLAUDE.md` | 4 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 12 KB / 8 KB / 4 KB |
-| 单篇 task（`M<N>/T-*`）/ reference | 10 KB / 8 KB |
+| 单篇 task（`M<N>/T-*`）/ reference | 10 KB / 16 KB |
 | handbook / specs / 实施规格 | 8 KB / 10 KB / 16 KB |
 | 索引行（milestones 等） | ≤300 字符 |
 

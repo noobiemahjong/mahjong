@@ -42,6 +42,7 @@
 .agents/notes/implemented/process/2026-10-31-mutation-ledger-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-t7-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-team-taskbook-migration.md	8192
+.agents/notes/implemented/process/2026-11-01-m03-spec-split.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
@@ -81,8 +82,12 @@ docs/milestones/M0.2/T-4-Bot.md	10240
 docs/milestones/M0.2/T-5-本地会话.md	10240
 docs/milestones/M0.2/T-6-Godot最小闭环.md	10240
 docs/milestones/M0.2/T-7-收口.md	10240
-docs/milestones/M0.3-实施规格.md	16384
 docs/milestones/M0.3-规则完整化.md	12288
+docs/milestones/M0.3/T-1-规则表与数值定稿.md	10240
+docs/milestones/M0.3/T-2-庄家计分.md	10240
+docs/milestones/M0.3/T-3-抢杠与承包.md	10240
+docs/milestones/M0.3/T-4-中马.md	10240
+docs/milestones/M0.3/T-5-回归与收口.md	10240
 docs/milestones/M1-回放与流正式化.md	12288
 docs/milestones/M1-实施规格.md	16384
 docs/milestones/M2-实施规格.md	16384

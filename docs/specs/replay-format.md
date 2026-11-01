@@ -42,9 +42,9 @@
 | 0x17 | RoundEnded | 同上 |
 | 0x18 | GameEnded | 同上 |
 | 0x19 | SeatStateChanged | 同上 |
-| 0x1A | HorseRevealed | 同 M0.3 规格（horseSeat、tileId 公开） |
+| 0x1A | HorseRevealed | 同 [M0.3 T-4 §3](../milestones/M0.3/T-4-中马.md#3-事件与载荷)（horseSeat、tileId 公开） |
 
-payload 字段表以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md#11-事件-payload二进制字段按序) 与 [M0.3 规格](../milestones/M0.3-实施规格.md) 为权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
+payload 字段表以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md#11-事件-payload权威布局) 与 [M0.3 T-1 §4](../milestones/M0.3/T-1-规则表与数值定稿.md#4-事件协议回放字段总表) 为权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
 
 ## 4. Index 与 Trailer
 

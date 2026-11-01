@@ -178,6 +178,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-11-01-m03-spec-split.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
@@ -334,12 +338,28 @@
       "limitBytes": 10240
     },
     {
-      "path": "docs/milestones/M0.3-实施规格.md",
-      "limitBytes": 16384
-    },
-    {
       "path": "docs/milestones/M0.3-规则完整化.md",
       "limitBytes": 12288
+    },
+    {
+      "path": "docs/milestones/M0.3/T-1-规则表与数值定稿.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.3/T-2-庄家计分.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.3/T-3-抢杠与承包.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.3/T-4-中马.md",
+      "limitBytes": 10240
+    },
+    {
+      "path": "docs/milestones/M0.3/T-5-回归与收口.md",
+      "limitBytes": 10240
     },
     {
       "path": "docs/milestones/M1-回放与流正式化.md",

@@ -182,6 +182,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-11-02-verification-by-change-surface.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },

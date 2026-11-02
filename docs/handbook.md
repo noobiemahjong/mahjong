@@ -49,7 +49,7 @@ pwsh -File tools/aot-smoke/aot-smoke.ps1     # AOT 导出 + 独立 exe 冒烟
 - **任务**：master 任务表是状态唯一权威；开工时建 `M<N>/T-<n>-*.md` 记录判据与实施记录。
 - **决策**：改设计基线写 [Agent Note](../.agents/notes/README.md)（Problem/Decision/Alternatives/Consequences），同批更新 DESIGN。
 - **坑/事故**：坑进 [engineering/pitfalls](engineering/pitfalls/README.md)，事故进 [postmortem](postmortem/README.md)。
-- **验证**：L1 构建+相关单测；L2 doc-gate+全量单测；L3 AOT/金标；见 [development](development.md)。
+- **验证**：L1 构建+相关单测；L2 doc-gate（改文档时）；L3 AOT/金标；全量（构建+全量单测+doc-gate）只在跨面改动/收口/CI 跑；见 [development](development.md)。
 - **批次型任务**：按 [团队任务书](../tools/team-taskbook/README.md) 执行（Lead 标准 + 契约/单元模板）；小改动仍走普通任务流程。
 
 ## 6. 接一个任务的标准流程

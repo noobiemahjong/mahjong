@@ -43,6 +43,7 @@
 .agents/notes/implemented/process/2026-10-31-t7-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-team-taskbook-migration.md	8192
 .agents/notes/implemented/process/2026-11-01-m03-spec-split.md	8192
+.agents/notes/implemented/process/2026-11-02-verification-by-change-surface.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144

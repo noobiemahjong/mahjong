@@ -92,7 +92,7 @@
     |---|---|
     | 能不能编译？ | 只 `dotnet build Mahjong.sln`（不要顺带跑测试与门禁） |
     | 某个测试类绿不绿？ | 只 `dotnet test Mahjong.sln --filter <该类>`（已 build 过就加 `--no-build`） |
-    | 能不能提交 / 收口？ | build → L1 测试 → `pwsh -File tools/doc-gate/doc-gate.ps1 -Fail`，**同一个 `run_code` 里跑完** |
+    | 能不能提交 / 收口？ | 改哪个面跑哪个面：文档批只 `pwsh -File tools/doc-gate/doc-gate.ps1 -Fail`；代码批 build → 相关测试；跨面才合并，**同一个 `run_code` 里跑完** |
 
     **禁止两件事**：① 同一个问题的答案拆成多步；② 把不同问题硬塞成一批（中间态跑 doc-gate 必然白红；只改文档却跑 build 是空转）。成本口径：**一步 = 一次完整上下文重发，步骤数才是成本**；L1/L2/L3 是「跑什么、何时跑」的口径（见 `docs/development.md`），不是调用粒度。
 14. **状态新鲜**：任务板状态及时变更，让用户和所有成员都能看到最新进展；完成后向用户汇报。

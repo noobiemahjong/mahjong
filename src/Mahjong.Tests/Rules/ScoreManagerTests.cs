@@ -4,10 +4,10 @@ using Xunit;
 namespace Mahjong.Tests.Rules;
 
 /// <summary>
-/// 计分账本契约：单次动作先校验再写暂存（失败不改状态）、自摸四座净 0、杠四座净 0、
+/// 计分账本契约：单次动作先校验再写暂存（失败不改状态）、每次计分动作四座净 0、
 /// Release/RollbackRound 的分层语义与幂等、只读视图不能改内部状态。
 /// 数值锚点按手算：无鬼自摸 +12/-4×3；有鬼 +6/-2×3；七对无鬼 +24/-8×3；七对有鬼 +12/-4×3；
-/// 杠上开花再 ×2；明杠 +3/-3、暗杠 +6/-2×3、补杠 +3/-1×3。
+/// 杠上开花再 ×2；明杠 +3/-3、暗杠 +6/-2×3、补杠 +3/-1×3；连庄奖励 +3b/-b×3；跟庄 +1/-1。
 /// </summary>
 public sealed class ScoreManagerTests
 {
@@ -74,11 +74,14 @@ public sealed class ScoreManagerTests
     }
 
     [Theory]
-    [InlineData(128)]
-    [InlineData(256)]
+    [InlineData(16384)]
     [InlineData(32768)]
+    [InlineData(49152)]
+    [InlineData(16385)]
     public void Apply_UndefinedFlagBits_ThrowsAndLeavesStateUnchanged(int rawType)
     {
+        // 未定义位取 16384、32768 及其组合（含「已定义位 + 未定义位」的混用），
+        // 不占用 512–8192：那几位是规则位，定义后不再是非法输入。
         ScoreManager scores = new();
         scores.Apply(3, 4, ScoreActionType.NoJoker);
         string before = RoundTestSupport.Book(scores);
@@ -339,6 +342,234 @@ public sealed class ScoreManagerTests
         Assert.Throws<ArgumentOutOfRangeException>(() => scores.ApplyKong(seat: 4, MeldKind.KongConcealed));
 
         Assert.Equal(before, RoundTestSupport.Book(scores));
+    }
+
+    [Fact]
+    public void ScoreActionType_DealerAndFollowingBitsKeepPublishedValues()
+    {
+        // 位值参与回放与协议编码：128 / 256 已定稿，既有 1–64 不动，两位互不重叠。
+        Assert.Equal(128, (ushort)ScoreActionType.DealerStreak);
+        Assert.Equal(256, (ushort)ScoreActionType.FollowingTheBanker);
+        Assert.Equal(0, (ushort)(ScoreActionType.DealerStreak & ScoreActionType.FollowingTheBanker));
+        Assert.Equal(384, (ushort)(ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker));
+    }
+
+    [Fact]
+    public void Apply_AcceptsDealerStreakAndFollowingTheBankerBits()
+    {
+        // 掩码扩容后两位都是合法输入；未并入掩码时 Apply 会以未定义位抛 ArgumentOutOfRangeException。
+        ScoreManager scores = new();
+
+        scores.Apply(0, 1, ScoreActionType.DealerStreak);
+        scores.Apply(1, -1, ScoreActionType.FollowingTheBanker);
+
+        Assert.Equal(
+            ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker,
+            scores.RoundActionType);
+        Assert.Equal(new short[] { 1, -1, 0, 0 }, scores.RoundDelta.ToArray());
+    }
+
+    [Fact]
+    public void ApplyDealerStreak_PaysThreeSharesToBanker()
+    {
+        ScoreManager scores = new();
+
+        scores.ApplyDealerStreak(bankerSeat: 0, bonus: 2);
+
+        // 三家各付 2、庄家收 3×2。
+        Assert.Equal(new short[] { 6, -2, -2, -2 }, scores.RoundDelta.ToArray());
+        Assert.Equal(0, scores.RoundDelta.Sum(value => (int)value));
+        Assert.Equal(ScoreActionType.DealerStreak, scores.RoundActionType);
+    }
+
+    [Fact]
+    public void ApplyDealerStreak_TableTailBonusThreeStacksOnSelfDrawn()
+    {
+        // 庄家无鬼自摸 +12/-4×3 之后，streak=4（每家 3）再 +9/-3×3。
+        ScoreManager scores = new();
+        scores.ApplySelfDrawn(winnerSeat: 0, hasJoker: false, sevenPairs: false, kongUpFlower: false);
+
+        scores.ApplyDealerStreak(bankerSeat: 0, bonus: 3);
+
+        Assert.Equal(new short[] { 21, -7, -7, -7 }, scores.RoundDelta.ToArray());
+        Assert.Equal(0, scores.RoundDelta.Sum(value => (int)value));
+        Assert.Equal(
+            ScoreActionType.DealerStreak | ScoreActionType.SelfDrawn | ScoreActionType.NoJoker,
+            scores.RoundActionType);
+    }
+
+    [Fact]
+    public void ApplyDealerStreak_ZeroBonus_SkipsWithoutSettingFlag()
+    {
+        ScoreManager scores = new();
+        scores.Apply(1, 3, ScoreActionType.SelfDrawn);
+        string before = RoundTestSupport.Book(scores);
+
+        scores.ApplyDealerStreak(bankerSeat: 2, bonus: 0);
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+        Assert.Equal(ScoreActionType.SelfDrawn, scores.RoundActionType);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-3)]
+    public void ApplyDealerStreak_NegativeBonus_ThrowsAndLeavesStateUnchanged(int bonus)
+    {
+        ScoreManager scores = new();
+        scores.ApplyKong(0, MeldKind.KongConcealed);
+        string before = RoundTestSupport.Book(scores);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => scores.ApplyDealerStreak(bankerSeat: 0, bonus));
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+    }
+
+    [Theory]
+    [InlineData(4)]
+    [InlineData(255)]
+    public void ApplyDealerStreak_SeatOutOfRange_ThrowsAndLeavesStateUnchanged(byte bankerSeat)
+    {
+        ScoreManager scores = new();
+        scores.Apply(3, -2, ScoreActionType.None);
+        string before = RoundTestSupport.Book(scores);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => scores.ApplyDealerStreak(bankerSeat, bonus: 1));
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+    }
+
+    [Fact]
+    public void ApplyFollowingTheBanker_TransfersAmountFromBankerToWinner()
+    {
+        ScoreManager scores = new();
+
+        scores.ApplyFollowingTheBanker(winnerSeat: 2, bankerSeat: 0, amount: 1);
+
+        Assert.Equal(new short[] { -1, 0, 1, 0 }, scores.RoundDelta.ToArray());
+        Assert.Equal(0, scores.RoundDelta.Sum(value => (int)value));
+        Assert.Equal(ScoreActionType.FollowingTheBanker, scores.RoundActionType);
+    }
+
+    [Fact]
+    public void ApplyFollowingTheBanker_ZeroAmount_SkipsWithoutSettingFlag()
+    {
+        ScoreManager scores = new();
+        scores.Apply(2, 4, ScoreActionType.None);
+        string before = RoundTestSupport.Book(scores);
+
+        scores.ApplyFollowingTheBanker(winnerSeat: 2, bankerSeat: 1, amount: 0);
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+        Assert.Equal(ScoreActionType.None, scores.RoundActionType);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-2)]
+    public void ApplyFollowingTheBanker_NegativeAmount_ThrowsAndLeavesStateUnchanged(int amount)
+    {
+        ScoreManager scores = new();
+        scores.ApplySelfDrawn(winnerSeat: 1, hasJoker: true, sevenPairs: false, kongUpFlower: false);
+        string before = RoundTestSupport.Book(scores);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => scores.ApplyFollowingTheBanker(winnerSeat: 1, bankerSeat: 3, amount));
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+    }
+
+    [Theory]
+    [InlineData(4, 0)]
+    [InlineData(0, 4)]
+    [InlineData(255, 255)]
+    public void ApplyFollowingTheBanker_SeatOutOfRange_ThrowsAndLeavesStateUnchanged(byte winnerSeat, byte bankerSeat)
+    {
+        ScoreManager scores = new();
+        scores.Apply(0, 1, ScoreActionType.None);
+        string before = RoundTestSupport.Book(scores);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => scores.ApplyFollowingTheBanker(winnerSeat, bankerSeat, amount: 1));
+
+        Assert.Equal(before, RoundTestSupport.Book(scores));
+    }
+
+    [Fact]
+    public void ApplyFollowingTheBanker_SameSeat_TransfersNothingAndSetsFlag()
+    {
+        // 赢家与庄家不同座由调用方保证，入口不做该检查：同座时两笔相抵为 0，仍按一位规则置位。
+        ScoreManager scores = new();
+
+        scores.ApplyFollowingTheBanker(winnerSeat: 2, bankerSeat: 2, amount: 1);
+
+        Assert.Equal(new short[] { 0, 0, 0, 0 }, scores.RoundDelta.ToArray());
+        Assert.Equal(ScoreActionType.FollowingTheBanker, scores.RoundActionType);
+    }
+
+    [Fact]
+    public void ApplyDealerStreakAndFollowingTheBanker_StackWithZeroSum()
+    {
+        ScoreManager scores = new();
+
+        scores.ApplyDealerStreak(bankerSeat: 0, bonus: 2);
+        scores.ApplyFollowingTheBanker(winnerSeat: 2, bankerSeat: 0, amount: 1);
+
+        // 连庄 [ 6, -2, -2, -2 ] 之上，赢家 2 收 1、庄家 0 付 1。
+        Assert.Equal(new short[] { 5, -2, -1, -2 }, scores.RoundDelta.ToArray());
+        Assert.Equal(0, scores.RoundDelta.Sum(value => (int)value));
+        Assert.Equal(
+            ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker,
+            scores.RoundActionType);
+    }
+
+    [Fact]
+    public void DealerStreakAndFollowingTheBanker_UnionWithSelfDrawnAndKongBits()
+    {
+        ScoreManager scores = new();
+        scores.ApplyKong(seat: 0, MeldKind.KongConcealed);
+        scores.ApplySelfDrawn(winnerSeat: 0, hasJoker: false, sevenPairs: false, kongUpFlower: false);
+
+        scores.ApplyDealerStreak(bankerSeat: 0, bonus: 2);
+
+        // 暗杠 [ 6, -2, -2, -2 ] + 无鬼自摸 [ 12, -4, -4, -4 ] + 连庄 2 [ 6, -2, -2, -2 ]。
+        Assert.Equal(new short[] { 24, -8, -8, -8 }, scores.RoundDelta.ToArray());
+        Assert.Equal(0, scores.RoundDelta.Sum(value => (int)value));
+        Assert.Equal(
+            ScoreActionType.ConcealedKong
+            | ScoreActionType.SelfDrawn
+            | ScoreActionType.NoJoker
+            | ScoreActionType.DealerStreak,
+            scores.RoundActionType);
+    }
+
+    [Fact]
+    public void RollbackRound_ClearsDealerStreakAndFollowingTheBanker()
+    {
+        ScoreManager scores = new();
+        scores.ApplyDealerStreak(bankerSeat: 1, bonus: 1);
+        scores.ApplyFollowingTheBanker(winnerSeat: 3, bankerSeat: 1, amount: 1);
+
+        scores.RollbackRound();
+
+        Assert.Equal(new short[] { 0, 0, 0, 0 }, scores.RoundDelta.ToArray());
+        Assert.Equal(new short[] { 0, 0, 0, 0 }, scores.TotalScores.ToArray());
+        Assert.Equal(ScoreActionType.None, scores.RoundActionType);
+    }
+
+    [Fact]
+    public void Release_MergesDealerStreakAndFollowingTheBankerThenClears()
+    {
+        ScoreManager scores = new();
+        scores.ApplyDealerStreak(bankerSeat: 2, bonus: 1);
+        scores.ApplyFollowingTheBanker(winnerSeat: 0, bankerSeat: 2, amount: 1);
+
+        scores.Release();
+
+        // 连庄 [ -1, -1, 3, -1 ] 之上，赢家 0 收 1、庄家 2 付 1。
+        Assert.Equal(new short[] { 0, -1, 2, -1 }, scores.TotalScores.ToArray());
+        Assert.Equal(new short[] { 0, 0, 0, 0 }, scores.RoundDelta.ToArray());
+        Assert.Equal(ScoreActionType.None, scores.RoundActionType);
     }
 
     [Fact]

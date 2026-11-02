@@ -3,11 +3,12 @@ using Mahjong.Core.Rules;
 
 namespace Mahjong.Session;
 
-/// <summary>一局开始的 payload：局号、庄家座位、发牌后牌墙张数。</summary>
+/// <summary>一局开始的 payload：局号、庄家座位、发牌后牌墙张数与本局连庄次数。</summary>
 /// <param name="RoundNo">局号 1–8。</param>
 /// <param name="BankerSeat">本局庄家座位 0–3。</param>
 /// <param name="WallCount">发牌后牌墙张数。</param>
-public readonly record struct RoundStartedPayload(byte RoundNo, byte BankerSeat, ushort WallCount);
+/// <param name="DealerStreak">本局连庄次数：第 1 局恒 1，庄家胡递增、非庄胡归 1、流局不变。</param>
+public readonly record struct RoundStartedPayload(byte RoundNo, byte BankerSeat, ushort WallCount, byte DealerStreak);
 
 /// <summary>回合开始的 payload：座位与回合截止 tick。</summary>
 /// <param name="Seat">回合座位 0–3。</param>

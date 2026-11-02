@@ -30,6 +30,12 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
     private readonly IRandomSource _rng;
     private readonly TileType _joker;
     private readonly bool _jokerActive;
+
+    /// <summary>连庄奖励表，按连庄次数升序；空表表示变体关闭，任何连庄都不付。</summary>
+    private readonly IReadOnlyList<int> _dealerStreakBonus;
+
+    /// <summary>跟庄金额；0 表示变体关闭，非庄胡不付跟庄。</summary>
+    private readonly int _followingBanker;
     private readonly byte? _humanSeat;
     private readonly int _botDelayTicks;
     private readonly GameState _state = new();
@@ -52,10 +58,11 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
 
     /// <summary>
     /// 创建会话：校验配置并装配局面、计分、校验器、请求登记与调度器；不启动、不产事件。
-    /// 鬼牌只取 <see cref="ContentCatalog.Joker"/> 的固定牌种，无鬼时用 <c>default(TileType)</c>。
+    /// 鬼牌只取 <see cref="ContentCatalog.Joker"/> 的固定牌种，无鬼时用 <c>default(TileType)</c>；
+    /// 计分变体只取 <see cref="ContentCatalog.Variants"/> 的连庄奖励表与跟庄金额，缺省即关闭（不付、不置位）。
     /// </summary>
     /// <param name="config">会话配置；真人座位/Bot 数组合与 tick/超时数值在此校验。</param>
-    /// <param name="content">已加载内容目录；只读，用于取鬼牌规则。</param>
+    /// <param name="content">已加载内容目录；只读，用于取鬼牌规则与计分变体。</param>
     /// <param name="wins">胡牌判定器；判定期只读。</param>
     /// <param name="rng">随机源；只用于首局起庄与每局洗牌，Bot 不消费。</param>
     /// <exception cref="ArgumentNullException">任一参数为 null。</exception>
@@ -80,6 +87,8 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
             ? content.Joker.Type.GetValueOrDefault()
             : default;
         _jokerActive = IsJokerActive(_joker);
+        _dealerStreakBonus = content.Variants.DealerStreakBonus;
+        _followingBanker = content.Variants.FollowingBanker;
         _botDelayTicks = ComputeBotDelayTicks(config.TickRate);
         _verifier = new CardAndSkillVerifier(wins, _joker);
         _botPolicy = new SimpleBotPolicy(wins, _verifier);

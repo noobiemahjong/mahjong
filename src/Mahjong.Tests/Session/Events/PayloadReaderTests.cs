@@ -19,7 +19,7 @@ public sealed class PayloadReaderTests
         var buffer = new SessionEventBuffer();
         var request = new PendingRequest(5, 2, RequestKind.Discard, AllowedVerbs.Discard | AllowedVerbs.Kong, 615);
         var answer = new GameCommand(1, 3, 2, CommandVerb.Kong, 4, 21, 5);
-        buffer.EmitRoundStarted(10, 3, 2, 84);
+        buffer.EmitRoundStarted(10, 3, 2, 84, 4);
         buffer.EmitTurnStarted(11, 2, 700);
         buffer.EmitDeal(12, 1, Tiles(1, 2, 3));
         buffer.EmitHandSync(13, 1, Tiles(4, 5));
@@ -35,7 +35,7 @@ public sealed class PayloadReaderTests
         IReadOnlyList<SessionEvent> events = buffer.Drain(255);
 
         RoundStartedPayload roundStarted = SessionEventPayloadReader.ReadRoundStarted(events[0]);
-        Assert.Equal(new RoundStartedPayload(3, 2, 84), roundStarted);
+        Assert.Equal(new RoundStartedPayload(3, 2, 84, 4), roundStarted);
 
         TurnStartedPayload turnStarted = SessionEventPayloadReader.ReadTurnStarted(events[1]);
         Assert.Equal(new TurnStartedPayload(2, 700), turnStarted);
@@ -138,10 +138,28 @@ public sealed class PayloadReaderTests
         Assert.Throws<InvalidDataException>(() => ReadByKind(sessionEvent));
     }
 
+    [Fact]
+    public void ReadRoundStarted_AcceptsFiveBytePayload_AndRejectsLegacyFourBytes()
+    {
+        var buffer = new SessionEventBuffer();
+        buffer.EmitRoundStarted(10, 3, 2, 84, 5);
+        SessionEvent sessionEvent = Assert.Single(buffer.Drain(255));
+
+        // 合法：5B 精确长度，第 5 字节是本局连庄次数。
+        Assert.Equal(5, sessionEvent.Payload.Length);
+        RoundStartedPayload parsed = SessionEventPayloadReader.ReadRoundStarted(sessionEvent);
+        Assert.Equal(new RoundStartedPayload(3, 2, 84, 5), parsed);
+
+        // 不兼容：旧 4B 载荷与更短的 3B 载荷一律按精确长度拒绝。
+        Assert.Throws<InvalidDataException>(() => SessionEventPayloadReader.ReadRoundStarted(Raw(SessionEventKind.RoundStarted, 3, 2, 84, 0)));
+        Assert.Throws<InvalidDataException>(() => SessionEventPayloadReader.ReadRoundStarted(Raw(SessionEventKind.RoundStarted, 3, 2, 84)));
+        Assert.Throws<InvalidDataException>(() => SessionEventPayloadReader.ReadRoundStarted(Raw(SessionEventKind.RoundStarted, 3, 2)));
+    }
+
     public static TheoryData<SessionEventKind, byte[]> InvalidPayloads => new()
     {
         { SessionEventKind.RoundStarted, new byte[] { 1, 2, 3 } },
-        { SessionEventKind.RoundStarted, new byte[] { 1, 2, 3, 4, 5 } },
+        { SessionEventKind.RoundStarted, new byte[] { 1, 2, 3, 4 } },
         { SessionEventKind.TurnStarted, new byte[8] },
         { SessionEventKind.Deal, new byte[] { 1 } },
         { SessionEventKind.Deal, new byte[] { 1, 3, 1, 0, 2, 0 } },

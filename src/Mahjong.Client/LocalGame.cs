@@ -632,7 +632,7 @@ public partial class LocalGame : Control
             return "无";
         }
 
-        var parts = new List<string>(6);
+        var parts = new List<string>(8);
         if ((type & ScoreActionType.SelfDrawn) != 0) parts.Add("自摸");
         if ((type & ScoreActionType.SevenPairs) != 0) parts.Add("七对");
         if ((type & ScoreActionType.ConcealedKong) != 0) parts.Add("暗杠");
@@ -640,6 +640,8 @@ public partial class LocalGame : Control
         if ((type & ScoreActionType.KongSupplement) != 0) parts.Add("补杠");
         if ((type & ScoreActionType.KongUpFlower) != 0) parts.Add("杠上开花");
         if ((type & ScoreActionType.NoJoker) != 0) parts.Add("无鬼");
+        if ((type & ScoreActionType.DealerStreak) != 0) parts.Add("连庄");
+        if ((type & ScoreActionType.FollowingTheBanker) != 0) parts.Add("跟庄");
         return string.Join("、", parts);
     }
 }

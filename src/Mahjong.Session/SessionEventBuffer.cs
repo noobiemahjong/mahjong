@@ -25,7 +25,8 @@ internal sealed class SessionEventBuffer
     /// <param name="roundNo">局号 1–8。</param>
     /// <param name="bankerSeat">庄家座位 0–3。</param>
     /// <param name="wallCount">发牌后牌墙张数。</param>
-    public void EmitRoundStarted(long tick, byte roundNo, byte bankerSeat, ushort wallCount) =>
+    /// <param name="dealerStreak">本局连庄次数，载荷第 5 字节。</param>
+    public void EmitRoundStarted(long tick, byte roundNo, byte bankerSeat, ushort wallCount, byte dealerStreak) =>
         Add(new PendingEvent
         {
             Kind = SessionEventKind.RoundStarted,
@@ -33,6 +34,7 @@ internal sealed class SessionEventBuffer
             RoundNo = roundNo,
             BankerSeat = bankerSeat,
             WallCount = wallCount,
+            DealerStreak = dealerStreak,
         });
 
     /// <summary>记录回合开始事件。</summary>
@@ -282,10 +284,11 @@ internal sealed class SessionEventBuffer
 
     private static byte[] EncodeRoundStarted(PendingEvent pending)
     {
-        byte[] payload = new byte[4];
+        byte[] payload = new byte[5];
         payload[0] = pending.RoundNo;
         payload[1] = pending.BankerSeat;
         BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(2, 2), pending.WallCount);
+        payload[4] = pending.DealerStreak;
         return payload;
     }
 
@@ -487,6 +490,7 @@ internal sealed class SessionEventBuffer
         public byte RoundNo;
         public byte BankerSeat;
         public ushort WallCount;
+        public byte DealerStreak;
         public long DeadlineTick;
         public int TileId;
         public ushort Slot;

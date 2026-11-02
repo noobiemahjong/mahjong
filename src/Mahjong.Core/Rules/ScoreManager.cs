@@ -7,10 +7,11 @@ namespace Mahjong.Core.Rules;
 /// 单次计分动作先完成全部校验，再一次性写暂存，失败不改变任何状态；局终用 <see cref="Release"/>
 /// 把暂存并入总分，流局先 <see cref="RollbackRound"/> 再 <see cref="Release"/>，净变化为 0。
 ///
-/// 计分口径是 M0.2 子集：自摸（无鬼 4 / 有鬼 2，七对 ×2，杠上开花 ×2）、明杠、暗杠、补杠；
-/// 不含连庄奖励、承包、跟庄、中马。单次自摸四座 delta 之和为 0，单次杠四座 delta 之和为 0。
+/// 计分口径：自摸（无鬼 4 / 有鬼 2，七对 ×2，杠上开花 ×2）、明杠、暗杠、补杠、连庄奖励、跟庄；
+/// 不含抢杠、承包、中马。单次计分动作四座 delta 之和均为 0。
 ///
 /// 金额上界：单次自摸单座最多 +24（七对与杠上开花互斥，各自只能再乘一次 ×2），单次杠单座最多 +6；
+/// 按规则表取值时连庄奖励单座最多 ±9（每家最多 3）、跟庄单座最多 ±1；
 /// 每局单座净额是这些动作的累加，8 局累计仍远小于 short 的 ±32767，故用 short 记账且不做溢出保护。
 ///
 /// 实例非线程安全；座位固定 4 个。
@@ -20,7 +21,7 @@ public sealed class ScoreManager
     /// <summary>座位数，固定 4。</summary>
     private const int SeatCount = 4;
 
-    /// <summary>已定义的番种/杠位位集；超出该掩码的位是非法输入。</summary>
+    /// <summary>已定义的番种、杠位与规则位位集；超出该掩码的位是非法输入。</summary>
     private const ScoreActionType AllActionTypes =
         ScoreActionType.SelfDrawn
         | ScoreActionType.SevenPairs
@@ -28,7 +29,9 @@ public sealed class ScoreManager
         | ScoreActionType.ExposedKong
         | ScoreActionType.KongSupplement
         | ScoreActionType.KongUpFlower
-        | ScoreActionType.NoJoker;
+        | ScoreActionType.NoJoker
+        | ScoreActionType.DealerStreak
+        | ScoreActionType.FollowingTheBanker;
 
     /// <summary>三种杠位的并集，用于「七对须 0 副露」与「杠上开花须有杠」的判定。</summary>
     private const ScoreActionType KongActions =
@@ -279,6 +282,102 @@ public sealed class ScoreManager
                     kind,
                     "Kong kind must be KongExposed, KongConcealed or KongSupplement.");
         }
+    }
+
+    /// <summary>
+    /// 连庄奖励结算：三家各付一份、庄家收三份，即庄家 <c>+3*bonus</c>、其余三家各 <c>-bonus</c>，四座 delta 之和为 0。
+    /// 置位 <see cref="ScoreActionType.DealerStreak"/>（一位规则，庄家收的一笔与三家付的三笔同置）。
+    /// <paramref name="bonus"/> 为 0 时既不改暂存也不置位：本局无连庄奖励。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做记账，不判定是否庄家胡、不查连庄次数、不设金额上界：金额由调用方按连庄奖励表取值。
+    /// </summary>
+    /// <param name="bankerSeat">本局庄家座位 0–3。</param>
+    /// <param name="bonus">三家各付的连庄奖励，非负；0 表示本局无奖励。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="bankerSeat"/> 不在 0–3，或 <paramref name="bonus"/> 为负；失败时不改变任何状态。
+    /// </exception>
+    public void ApplyDealerStreak(byte bankerSeat, int bonus)
+    {
+        if (bankerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bankerSeat),
+                bankerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (bonus < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bonus),
+                bonus,
+                "Dealer streak bonus must not be negative.");
+        }
+
+        if (bonus == 0)
+        {
+            return;
+        }
+
+        // 校验全部完成后再一次性写暂存，保证失败路径不改状态。
+        for (byte seat = 0; seat < SeatCount; seat++)
+        {
+            _roundDelta[seat] = seat == bankerSeat
+                ? (short)(_roundDelta[seat] + (bonus * 3))
+                : (short)(_roundDelta[seat] - bonus);
+        }
+
+        _roundActionType |= ScoreActionType.DealerStreak;
+    }
+
+    /// <summary>
+    /// 跟庄结算：赢家 <c>+amount</c>、庄家 <c>-amount</c>，四座 delta 之和为 0（两座相同时两笔相抵）。
+    /// 置位 <see cref="ScoreActionType.FollowingTheBanker"/>（一位规则，赢家收的一笔与庄家付的一笔同置），每局最多一次由调用方保证。
+    /// <paramref name="amount"/> 为 0 时既不改暂存也不置位：变体关闭或本局不付跟庄。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做金额转移，不判定赢家是否庄家、不设金额上界；赢家与庄家不同座由调用方保证，入口不做该检查。
+    /// </summary>
+    /// <param name="winnerSeat">本局赢家座位 0–3。</param>
+    /// <param name="bankerSeat">本局庄家座位 0–3，即付款方。</param>
+    /// <param name="amount">跟庄金额，非负；0 表示本局不付。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="winnerSeat"/> 或 <paramref name="bankerSeat"/> 不在 0–3，或 <paramref name="amount"/> 为负；
+    /// 失败时不改变任何状态。
+    /// </exception>
+    public void ApplyFollowingTheBanker(byte winnerSeat, byte bankerSeat, int amount)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (bankerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bankerSeat),
+                bankerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                amount,
+                "Following-the-banker amount must not be negative.");
+        }
+
+        if (amount == 0)
+        {
+            return;
+        }
+
+        _roundDelta[winnerSeat] = (short)(_roundDelta[winnerSeat] + amount);
+        _roundDelta[bankerSeat] = (short)(_roundDelta[bankerSeat] - amount);
+        _roundActionType |= ScoreActionType.FollowingTheBanker;
     }
 
     /// <summary>撤回本局全部暂存：<see cref="RoundDelta"/> 归 0、<see cref="RoundActionType"/> 归 None；累计总分不变。幂等。</summary>

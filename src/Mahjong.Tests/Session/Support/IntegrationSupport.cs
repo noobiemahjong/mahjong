@@ -1,4 +1,5 @@
 using System.Text;
+using Mahjong.Core.Content;
 using Mahjong.Core.Content.Tables;
 using Mahjong.Core.Flow;
 using Mahjong.Core.Rules;
@@ -192,11 +193,21 @@ public static class IntegrationSupport
 
     /// <summary>
     /// 断言一局自摸结算：四座 delta 净 0；赢家局置位 SelfDrawn 且赢家金额为正；流局全 0 且动作聚合 None。
-    /// 该局没有任何杠位时按 (鬼牌?2:4) × (七对?2:1) × (杠上开花?2:1) 精确核算：三家各付一份、赢家收三份；
+    /// 该局没有任何杠位时按 (鬼牌?2:4) × (七对?2:1) × (杠上开花?2:1) 精确核算：三家各付一份、赢家收三份，
+    /// 再叠加结算第 2 步跟庄（赢家 ≠ 庄且变体开启）与第 3 步连庄奖励（赢家 = 庄且表值大于 0）；
     /// 有杠位的局只做零和/符号断言（杠分改变四座分配，精确金额由 Scoring 单测覆盖）。
+    /// 变体金额与被测结算同源取自内容目录，关闭时两项都不加。
     /// </summary>
-    public static void AssertSelfDrawnSettlement(RoundEndedPayload round)
+    /// <param name="round">本局结算 payload。</param>
+    /// <param name="started">本局开场的 RoundStarted payload（庄家与连庄次数）。</param>
+    /// <param name="variants">内容目录的规则变体。</param>
+    public static void AssertSelfDrawnSettlement(
+        RoundEndedPayload round,
+        RoundStartedPayload started,
+        ContentVariants variants)
     {
+        ArgumentNullException.ThrowIfNull(variants);
+
         Assert.Equal(GameState.PlayerCount, round.ScoreDelta.Length);
         Assert.Equal(0, round.ScoreDelta.Sum());
         Assert.InRange(round.WinnerSeat, (sbyte)-1, (sbyte)3);
@@ -228,11 +239,45 @@ public static class IntegrationSupport
         bool hasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
         bool kongUpFlower = (round.ActionType & ScoreActionType.KongUpFlower) != 0;
         int perSeat = (hasJoker ? 2 : 4) * (sevenPairs ? 2 : 1) * (kongUpFlower ? 2 : 1);
+        int[] expected = new int[GameState.PlayerCount];
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {
-            int expected = seat == winner ? perSeat * (GameState.PlayerCount - 1) : -perSeat;
-            Assert.Equal(expected, round.ScoreDelta[seat]);
+            expected[seat] = seat == winner ? perSeat * (GameState.PlayerCount - 1) : -perSeat;
         }
+
+        bool bankerWin = winner == started.BankerSeat;
+        Assert.Equal(
+            !bankerWin && variants.FollowingBanker > 0,
+            (round.ActionType & ScoreActionType.FollowingTheBanker) != 0);
+        if (!bankerWin && variants.FollowingBanker > 0)
+        {
+            expected[winner] += variants.FollowingBanker;
+            expected[started.BankerSeat] -= variants.FollowingBanker;
+        }
+
+        int bonus = DealerStreakBonus(variants.DealerStreakBonus, started.DealerStreak);
+        Assert.Equal(bankerWin && bonus > 0, (round.ActionType & ScoreActionType.DealerStreak) != 0);
+        if (bankerWin && bonus > 0)
+        {
+            for (int seat = 0; seat < GameState.PlayerCount; seat++)
+            {
+                expected[seat] = seat == started.BankerSeat ? expected[seat] + (3 * bonus) : expected[seat] - bonus;
+            }
+        }
+
+        Assert.Equal(expected, round.ScoreDelta);
+    }
+
+    /// <summary>连庄奖励表取值：<c>table[min(streak, 表长) - 1]</c>；空表（变体关闭）为 0。</summary>
+    private static int DealerStreakBonus(IReadOnlyList<int> table, byte dealerStreak)
+    {
+        if (table.Count == 0)
+        {
+            return 0;
+        }
+
+        int index = Math.Min(dealerStreak, table.Count) - 1;
+        return index < 0 ? 0 : table[index];
     }
 
     /// <summary>断言事件流序号从 1 开始、逐事件严格 +1（Drain 不重复、不丢号）。</summary>

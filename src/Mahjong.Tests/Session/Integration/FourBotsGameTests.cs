@@ -67,8 +67,15 @@ public sealed class FourBotsGameTests
         Assert.Contains(settlements, round => round.WinnerSeat >= 0);
         Assert.Contains(gameEnded.TotalScores, score => score != 0);
 
-        // 每局结算：零和、赢家自摸置位且金额为正、无杠位局精确核算、流局全 0 + None。
-        Assert.All(settlements, IntegrationSupport.AssertSelfDrawnSettlement);
+        // 每局结算：零和、赢家自摸置位且金额为正、无杠位局精确核算（含跟庄/连庄奖励）、流局全 0 + None。
+        Assert.Equal(rounds.Length, settlements.Length);
+        for (int index = 0; index < settlements.Length; index++)
+        {
+            IntegrationSupport.AssertSelfDrawnSettlement(
+                settlements[index],
+                rounds[index],
+                SessionTestSupport.Content.Variants);
+        }
 
         // 总分三口径一致。
         int[] accumulated = IntegrationSupport.AccumulateRoundDeltas(run.Events);

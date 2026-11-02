@@ -58,13 +58,20 @@ public sealed class ScriptedHumanGameTests
         Assert.Equal(SessionEventKind.GameEnded, run.Events[^1].Kind);
         Assert.DoesNotContain(run.Events, sessionEvent => sessionEvent.Kind == SessionEventKind.HandSync);
 
-        // 每局结算：零和、赢家自摸置位且金额为正、无杠位局精确核算、流局全 0 + None。
+        // 每局结算：零和、赢家自摸置位且金额为正、无杠位局精确核算（含跟庄/连庄奖励）、流局全 0 + None。
         RoundEndedPayload[] settlements = run.Events
             .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
             .Select(SessionEventPayloadReader.ReadRoundEnded)
             .ToArray();
         Assert.Equal(8, settlements.Length);
-        Assert.All(settlements, IntegrationSupport.AssertSelfDrawnSettlement);
+        Assert.Equal(rounds.Length, settlements.Length);
+        for (int index = 0; index < settlements.Length; index++)
+        {
+            IntegrationSupport.AssertSelfDrawnSettlement(
+                settlements[index],
+                rounds[index],
+                SessionTestSupport.Content.Variants);
+        }
 
         // 真人赢家路径必须被执行：至少 1 个 WinnerSeat==0 的赢家局、金额非零。
         RoundEndedPayload[] humanWins = settlements.Where(round => round.WinnerSeat == 0).ToArray();

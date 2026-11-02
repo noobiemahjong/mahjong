@@ -13,17 +13,30 @@ namespace Mahjong.Tests.Session.Events;
 public sealed class EventPayloadGoldenTests
 {
     [Fact]
-    public void RoundStarted_EncodesRoundNoBankerAndWallCount()
+    public void RoundStarted_EncodesRoundNoBankerWallCountAndDealerStreak()
     {
         var buffer = new SessionEventBuffer();
-        buffer.EmitRoundStarted(tick: 10, roundNo: 3, bankerSeat: 2, wallCount: 84);
+        buffer.EmitRoundStarted(tick: 10, roundNo: 3, bankerSeat: 2, wallCount: 84, dealerStreak: 1);
 
         SessionEvent sessionEvent = Assert.Single(buffer.Drain(255));
 
         Assert.Equal(1L, sessionEvent.Seq);
         Assert.Equal(10L, sessionEvent.Tick);
         Assert.Equal(SessionEventKind.RoundStarted, sessionEvent.Kind);
-        Assert.Equal(new byte[] { 0x03, 0x02, 0x54, 0x00 }, sessionEvent.Payload.ToArray());
+        Assert.Equal(new byte[] { 0x03, 0x02, 0x54, 0x00, 0x01 }, sessionEvent.Payload.ToArray());
+        Assert.Equal(5, sessionEvent.Payload.Length);
+    }
+
+    [Fact]
+    public void RoundStarted_EncodesDealerStreakAsTrailingByte()
+    {
+        var buffer = new SessionEventBuffer();
+        buffer.EmitRoundStarted(tick: 20, roundNo: 8, bankerSeat: 3, wallCount: 83, dealerStreak: 4);
+
+        SessionEvent sessionEvent = Assert.Single(buffer.Drain(255));
+
+        Assert.Equal(new byte[] { 0x08, 0x03, 0x53, 0x00, 0x04 }, sessionEvent.Payload.ToArray());
+        Assert.Equal((byte)4, SessionEventPayloadReader.ReadRoundStarted(sessionEvent).DealerStreak);
     }
 
     [Fact]

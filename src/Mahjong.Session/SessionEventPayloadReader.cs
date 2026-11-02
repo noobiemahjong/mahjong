@@ -16,15 +16,16 @@ public static class SessionEventPayloadReader
     /// <param name="sessionEvent">种类必须是 RoundStarted 的事件。</param>
     /// <returns>解析后的 payload。</returns>
     /// <exception cref="ArgumentException">事件种类不是 RoundStarted。</exception>
-    /// <exception cref="InvalidDataException">payload 长度非法。</exception>
+    /// <exception cref="InvalidDataException">payload 长度不是 5 字节（含旧 4B 与更短的载荷）。</exception>
     public static RoundStartedPayload ReadRoundStarted(SessionEvent sessionEvent)
     {
         ReadOnlySpan<byte> payload = GetPayload(sessionEvent, SessionEventKind.RoundStarted);
-        RequireLength(payload, 4, SessionEventKind.RoundStarted);
+        RequireLength(payload, 5, SessionEventKind.RoundStarted);
         return new RoundStartedPayload(
             payload[0],
             payload[1],
-            BinaryPrimitives.ReadUInt16LittleEndian(payload.Slice(2, 2)));
+            BinaryPrimitives.ReadUInt16LittleEndian(payload.Slice(2, 2)),
+            payload[4]);
     }
 
     /// <summary>读取 <see cref="SessionEventKind.TurnStarted"/> 的 payload。</summary>

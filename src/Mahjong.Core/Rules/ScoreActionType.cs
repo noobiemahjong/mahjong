@@ -32,4 +32,16 @@ public enum ScoreActionType : ushort
 
     /// <summary>无鬼牌自摸。</summary>
     NoJoker = 64,
+
+    /// <summary>
+    /// 连庄奖励：庄家胡后按连庄次数收取的奖励。一位规则，庄家收的一笔与三家各付的一笔同置本位置，
+    /// 金额为 0 时不置位。
+    /// </summary>
+    DealerStreak = 128,
+
+    /// <summary>
+    /// 跟庄：非庄胡时由庄家付给赢家的一笔。一位规则，赢家收的一笔与庄家付的一笔同置本位置，
+    /// 金额为 0 时不置位。
+    /// </summary>
+    FollowingTheBanker = 256,
 }

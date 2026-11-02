@@ -16,6 +16,9 @@ public sealed partial class GameSession
     private IEnumerator<ActionState> RunGameLoop()
     {
         byte bankerSeat = 0;
+
+        // 连庄次数与 bankerSeat 同寿命同源：协程局部变量，不进局面、不进状态哈希。
+        byte dealerStreak = 1;
         for (byte roundNo = 1; roundNo <= RoundController.TotalRounds; roundNo++)
         {
             if (roundNo == 1)
@@ -28,7 +31,7 @@ public sealed partial class GameSession
             _state.Deal(_rng, bankerSeat);
 
             long roundTick = _scheduler.Tick;
-            _events.EmitRoundStarted(roundTick, roundNo, bankerSeat, (ushort)_state.Wall.Count);
+            _events.EmitRoundStarted(roundTick, roundNo, bankerSeat, (ushort)_state.Wall.Count, dealerStreak);
             for (byte seatIndex = 0; seatIndex < GameState.PlayerCount; seatIndex++)
             {
                 _events.EmitDeal(roundTick, seatIndex, _state.Players[seatIndex].Hand.Items);
@@ -63,7 +66,10 @@ public sealed partial class GameSession
                             && winOutcome.Payload is GameCommand winCommand
                             && winCommand.Verb == CommandVerb.Win)
                         {
-                            bankerSeat = CompleteSelfDrawnWin(roundNo, bankerSeat, seat);
+                            // 局末转移按「赢家座位 ≠ 本局庄家」判定，不按结算返回值反推（D-07）。
+                            byte nextBanker = CompleteSelfDrawnWin(roundNo, bankerSeat, seat, dealerStreak);
+                            dealerStreak = seat == bankerSeat ? (byte)(dealerStreak + 1) : (byte)1;
+                            bankerSeat = nextBanker;
                             roundFinished = true;
                             break;
                         }
@@ -341,9 +347,14 @@ public sealed partial class GameSession
     /// <summary>
     /// 自摸结算：七对走 <see cref="ScoreManager.ApplySevenPairsSelfDrawn"/>（不受其他家杠位影响），
     /// 普通自摸的 kongUpFlower 只取决于赢家本回合最近一次摸牌是否为杠后补牌。
-    /// 结算顺序：取样 delta/actionType → Release → 写回镜像 → 产 RoundEnded；返回下一局庄家。
+    /// 结算顺序固定五步（T-2 §4）：①胡牌金额 → ②跟庄 → ③连庄奖励 → ④中马（T-4）→
+    /// ⑤取样 delta/actionType → Release → 写回镜像 → 产 RoundEnded；返回下一局庄家。
     /// </summary>
-    private byte CompleteSelfDrawnWin(byte roundNo, byte bankerSeat, byte winnerSeat)
+    /// <param name="roundNo">局号 1–8。</param>
+    /// <param name="bankerSeat">本局庄家座位 0–3，也是跟庄的付款方。</param>
+    /// <param name="winnerSeat">胡牌座位 0–3。</param>
+    /// <param name="dealerStreak">本局连庄次数，用于查连庄奖励表。</param>
+    private byte CompleteSelfDrawnWin(byte roundNo, byte bankerSeat, byte winnerSeat, byte dealerStreak)
     {
         PlayerState winner = _state.Players[winnerSeat];
         bool sevenPairs = _wins.IsSevenPairs(winner.Hand.Items, _joker);
@@ -353,6 +364,7 @@ public sealed partial class GameSession
             throw new InvalidOperationException("Win 请求结算时手牌既非七对也非常规胡。");
         }
 
+        // ① 胡牌金额：本批只有常规自摸与七对自摸；抢杠与三种承包的分支在 T-3 插入此处。
         bool hasJoker = _jokerActive && ContainsTileType(winner.Hand.Items, _joker.Id);
         if (sevenPairs)
         {
@@ -367,7 +379,25 @@ public sealed partial class GameSession
                 kongUpFlower: _lastDrawWasKongSupplement);
         }
 
-        // D10：结算 payload 统一经由公开的 RoundResult 构造，事件只从该快照取字段。
+        // ② 跟庄：赢家不是庄家且变体开启才付，庄家当场付给赢家，每局最多一次。
+        if (winnerSeat != bankerSeat && _followingBanker > 0)
+        {
+            _scores.ApplyFollowingTheBanker(winnerSeat, bankerSeat, _followingBanker);
+        }
+
+        // ③ 连庄奖励：赢家就是庄家且本局奖励金额大于 0 才付；第 8 局照常。
+        if (winnerSeat == bankerSeat)
+        {
+            int bonus = DealerStreakBonus(dealerStreak);
+            if (bonus > 0)
+            {
+                _scores.ApplyDealerStreak(bankerSeat, bonus);
+            }
+        }
+
+        // ④ 中马的位置：T-4 在此取墙头一张并入 Revealed、产马事件，本批不实现。
+
+        // ⑤ 收尾：D10 的结算 payload 统一经由公开的 RoundResult 构造，事件只从该快照取字段。
         short[] delta = CopyScores(_scores.RoundDelta);
         ScoreActionType actionType = _scores.RoundActionType;
         _scores.Release();
@@ -377,7 +407,22 @@ public sealed partial class GameSession
         return result.WinnerSeat;
     }
 
-    /// <summary>流局结算：回滚本局暂存再 Release（净 0），写回镜像，产 RoundEnded(-1, 全 0, None)。</summary>
+    /// <summary>
+    /// 本局连庄奖励金额：<c>dealerStreakBonus[min(streak, 表长) - 1]</c>；表为空（变体关闭）时为 0。
+    /// </summary>
+    private int DealerStreakBonus(byte dealerStreak)
+    {
+        int count = _dealerStreakBonus.Count;
+        if (count == 0)
+        {
+            return 0;
+        }
+
+        int index = Math.Min(dealerStreak, count) - 1;
+        return index < 0 ? 0 : _dealerStreakBonus[index];
+    }
+
+    /// <summary>流局结算：回滚本局暂存再 Release（净 0），写回镜像，产 RoundEnded(-1, 全 0, None)。庄家与连庄次数都不变。</summary>
     private void CompleteDrawRound(byte roundNo, byte bankerSeat)
     {
         _scores.RollbackRound();

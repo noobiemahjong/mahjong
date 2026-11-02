@@ -152,9 +152,12 @@ public sealed class GameSessionLifecycleTests
             },
             events.Select(sessionEvent => sessionEvent.Kind).ToArray());
 
+        // RoundStarted 载荷为 5B（末尾追加 dealerStreak）；第 1 局连庄次数恒 1。
+        Assert.Equal(5, events[0].Payload.Length);
         RoundStartedPayload roundStarted = SessionEventPayloadReader.ReadRoundStarted(events[0]);
         Assert.Equal((byte)1, roundStarted.RoundNo);
         Assert.Equal((ushort)84, roundStarted.WallCount);
+        Assert.Equal((byte)1, roundStarted.DealerStreak);
         byte banker = roundStarted.BankerSeat;
         Assert.Equal(banker, session.State.CurrentSeat);
 

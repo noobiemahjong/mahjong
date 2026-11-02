@@ -1,9 +1,11 @@
+using Mahjong.Core.Content;
 using Mahjong.Core.Content.Tables;
 using Mahjong.Core.Flow;
 using Mahjong.Core.Rules;
 using Mahjong.Session;
 using Mahjong.Tests.Content.Tables;
 using Mahjong.Tests.Session.Support;
+using Mahjong.Tests.Support;
 using Xunit;
 
 namespace Mahjong.Tests.Session.Flow;
@@ -233,6 +235,7 @@ public sealed class GameSessionRoundSettlementTests
         GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed: 7);
         session.Start();
         SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+        ContentVariants variants = SessionTestSupport.Content.Variants;
         int eventCursor = 0;
         var deltas = new int[GameState.PlayerCount];
         while (!session.IsGameOver)
@@ -247,8 +250,9 @@ public sealed class GameSessionRoundSettlementTests
                 }
 
                 RoundEndedPayload round = SessionEventPayloadReader.ReadRoundEnded(sessionEvent);
+                RoundStartedPayload started = RoundStartBefore(driver.Events, eventCursor);
                 List<MeldPayload> kongs = KongsInRound(driver.Events, eventCursor);
-                int[] expected = ExpectedDelta(round, kongs);
+                int[] expected = ExpectedDelta(round, started, kongs, variants);
                 Assert.Equal(expected, round.ScoreDelta);
                 Assert.Equal(0, round.ScoreDelta.Sum());
 
@@ -382,7 +386,13 @@ public sealed class GameSessionRoundSettlementTests
 
         Assert.NotEqual(-1, round.WinnerSeat);
         Assert.True((round.ActionType & ScoreActionType.SelfDrawn) != 0);
-        Assert.Equal(ExpectedDelta(round, KongsInRound(driver.Events, index)), round.ScoreDelta);
+        Assert.Equal(
+            ExpectedDelta(
+                round,
+                RoundStartBefore(driver.Events, index),
+                KongsInRound(driver.Events, index),
+                SessionTestSupport.Content.Variants),
+            round.ScoreDelta);
 
         // 七对金额：per = (有鬼 ? 2 : 4) × 2；赢家 +3per、其余 -per，叠加本局已发生的杠分。
         bool hasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
@@ -409,7 +419,13 @@ public sealed class GameSessionRoundSettlementTests
         (RoundEndedPayload Payload, int Index) up = roundEnded.First(pair =>
             (pair.Payload.ActionType & ScoreActionType.KongUpFlower) != 0);
         Assert.NotEqual(-1, up.Payload.WinnerSeat);
-        Assert.Equal(ExpectedDelta(up.Payload, KongsInRound(driver.Events, up.Index)), up.Payload.ScoreDelta);
+        Assert.Equal(
+            ExpectedDelta(
+                up.Payload,
+                RoundStartBefore(driver.Events, up.Index),
+                KongsInRound(driver.Events, up.Index),
+                SessionTestSupport.Content.Variants),
+            up.Payload.ScoreDelta);
 
         // 赢家本回合最后一摸是杠后补牌：该 Drew 紧跟在赢家的杠 Meld 之后且同 tick。
         int lastDrewIndex = -1;
@@ -501,6 +517,174 @@ public sealed class GameSessionRoundSettlementTests
         Assert.True(found);
     }
 
+    [Theory]
+    [InlineData(7UL)]
+    [InlineData(20UL)]
+    [InlineData(1UL)]
+    [InlineData(77UL)]
+    public void EveryRoundStarted_DealerStreakFollowsBankerWinRules(ulong seed)
+    {
+        GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed);
+        session.Start();
+        SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+        Assert.True(driver.RunToGameOver());
+
+        RoundStartedPayload[] rounds = driver.Events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundStarted)
+            .Select(SessionEventPayloadReader.ReadRoundStarted)
+            .ToArray();
+        sbyte[] winners = driver.Events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
+            .Select(sessionEvent => SessionEventPayloadReader.ReadRoundEnded(sessionEvent).WinnerSeat)
+            .ToArray();
+
+        Assert.Equal(8, rounds.Length);
+        Assert.Equal(8, winners.Length);
+
+        // 第 1 局恒 1；之后庄胡 +1（不封顶）、非庄胡归 1（按赢家 ≠ 本局庄家判定）、流局不变。
+        Assert.Equal((byte)1, rounds[0].DealerStreak);
+        for (int index = 1; index < rounds.Length; index++)
+        {
+            RoundStartedPayload previous = rounds[index - 1];
+            sbyte winner = winners[index - 1];
+            byte expectedBanker = winner >= 0 ? (byte)winner : previous.BankerSeat;
+            byte expectedStreak = winner < 0
+                ? previous.DealerStreak
+                : winner == previous.BankerSeat
+                    ? (byte)(previous.DealerStreak + 1)
+                    : (byte)1;
+
+            Assert.Equal((byte)(index + 1), rounds[index].RoundNo);
+            Assert.Equal(expectedBanker, rounds[index].BankerSeat);
+            Assert.Equal(expectedStreak, rounds[index].DealerStreak);
+        }
+    }
+
+    [Fact]
+    public void RoundEnded_SetsFollowingTheBankerAndDealerStreakOnlyForMatchingWinKind()
+    {
+        ContentVariants variants = SessionTestSupport.Content.Variants;
+        int bankerWins = 0;
+        int nonBankerWins = 0;
+        int streaksAboveOne = 0;
+
+        // seed 77 的第 5 局是连续第二次庄胡（streak 2），保证「连庄奖励 > 0 置位」分支有实际样本。
+        foreach (ulong seed in new ulong[] { 7, 20, 77 })
+        {
+            GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed);
+            session.Start();
+            SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+            Assert.True(driver.RunToGameOver());
+
+            RoundStartedPayload[] rounds = driver.Events
+                .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundStarted)
+                .Select(SessionEventPayloadReader.ReadRoundStarted)
+                .ToArray();
+            RoundEndedPayload[] ended = driver.Events
+                .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
+                .Select(SessionEventPayloadReader.ReadRoundEnded)
+                .ToArray();
+            Assert.Equal(rounds.Length, ended.Length);
+
+            for (int index = 0; index < ended.Length; index++)
+            {
+                RoundEndedPayload round = ended[index];
+                if (round.WinnerSeat < 0)
+                {
+                    Assert.Equal(ScoreActionType.None, round.ActionType);
+                    Assert.All(round.ScoreDelta, delta => Assert.Equal(0, delta));
+                    continue;
+                }
+
+                bool bankerWin = round.WinnerSeat == rounds[index].BankerSeat;
+                int bonus = DealerStreakBonus(variants.DealerStreakBonus, rounds[index].DealerStreak);
+                bool followingBit = (round.ActionType & ScoreActionType.FollowingTheBanker) != 0;
+                bool streakBit = (round.ActionType & ScoreActionType.DealerStreak) != 0;
+
+                // 跟庄只在非庄胡且变体开启时置位；连庄奖励只在庄胡且本局表值大于 0 时置位；两位互斥。
+                Assert.Equal(!bankerWin && variants.FollowingBanker > 0, followingBit);
+                Assert.Equal(bankerWin && bonus > 0, streakBit);
+                Assert.False(followingBit && streakBit);
+
+                if (bankerWin && rounds[index].DealerStreak > 1)
+                {
+                    streaksAboveOne++;
+                }
+
+                if (bankerWin)
+                {
+                    bankerWins++;
+                }
+                else
+                {
+                    nonBankerWins++;
+                }
+            }
+        }
+
+        // 三个种子合起来必须同时覆盖庄胡、非庄胡与连庄（streak > 1），否则上述分支断言没有实际样本。
+        Assert.True(bankerWins > 0);
+        Assert.True(nonBankerWins > 0);
+        Assert.True(streaksAboveOne > 0);
+    }
+
+    [Fact]
+    public void VariantsDisabled_StreakStillAdvancesButNothingIsPaidOrFlagged()
+    {
+        using var content = new TempContentDirectory();
+        ContentCatalog catalog = ContentCatalog.Load(content.Root);
+        GameSession session = LocalSessionFactory.Create(new SessionConfig(null, 4, 10), catalog, _fixture.Catalog, seed: 7);
+        session.Start();
+        SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+        Assert.True(driver.RunToGameOver());
+
+        ContentVariants disabled = ContentVariants.Disabled;
+        Assert.Empty(disabled.DealerStreakBonus);
+        Assert.Equal(0, disabled.FollowingBanker);
+
+        RoundStartedPayload[] rounds = driver.Events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundStarted)
+            .Select(SessionEventPayloadReader.ReadRoundStarted)
+            .ToArray();
+        sbyte[] winners = driver.Events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
+            .Select(sessionEvent => SessionEventPayloadReader.ReadRoundEnded(sessionEvent).WinnerSeat)
+            .ToArray();
+        Assert.Equal(8, rounds.Length);
+        Assert.Equal(8, winners.Length);
+
+        // 关闭只停付款与置位：连庄次数状态机照常推进（第 1 局 1、庄胡 +1、非庄胡归 1、流局不变）。
+        Assert.Equal((byte)1, rounds[0].DealerStreak);
+        for (int index = 1; index < rounds.Length; index++)
+        {
+            RoundStartedPayload previous = rounds[index - 1];
+            sbyte winner = winners[index - 1];
+            byte expectedStreak = winner < 0
+                ? previous.DealerStreak
+                : winner == previous.BankerSeat
+                    ? (byte)(previous.DealerStreak + 1)
+                    : (byte)1;
+            Assert.Equal(expectedStreak, rounds[index].DealerStreak);
+        }
+
+        const ScoreActionType VariantBits = ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker;
+        for (int index = 0; index < driver.Events.Count; index++)
+        {
+            SessionEvent sessionEvent = driver.Events[index];
+            if (sessionEvent.Kind != SessionEventKind.RoundEnded)
+            {
+                continue;
+            }
+
+            RoundEndedPayload round = SessionEventPayloadReader.ReadRoundEnded(sessionEvent);
+            Assert.Equal(0, (int)(round.ActionType & VariantBits));
+            Assert.Equal(
+                ExpectedDelta(round, RoundStartBefore(driver.Events, index), KongsInRound(driver.Events, index), disabled),
+                round.ScoreDelta);
+            Assert.Equal(0, round.ScoreDelta.Sum());
+        }
+    }
+
     /// <summary>取本局（上一个 RoundStarted 之后到 <paramref name="roundEndedIndex"/>）的杠事件。</summary>
     private static List<MeldPayload> KongsInRound(IReadOnlyList<SessionEvent> events, int roundEndedIndex)
     {
@@ -526,8 +710,42 @@ public sealed class GameSessionRoundSettlementTests
         return kongs;
     }
 
-    /// <summary>按契约口径从结算 payload 与事件重算本局四座 delta：杠分 + 自摸/七对。</summary>
-    private static int[] ExpectedDelta(RoundEndedPayload round, IReadOnlyList<MeldPayload> kongs)
+    /// <summary>取 <paramref name="index"/> 之前最近一条 RoundStarted 的 payload（本局开场快照）。</summary>
+    private static RoundStartedPayload RoundStartBefore(IReadOnlyList<SessionEvent> events, int index)
+    {
+        for (int cursor = index - 1; cursor >= 0; cursor--)
+        {
+            if (events[cursor].Kind == SessionEventKind.RoundStarted)
+            {
+                return SessionEventPayloadReader.ReadRoundStarted(events[cursor]);
+            }
+        }
+
+        throw new InvalidOperationException("RoundEnded 之前必须有 RoundStarted。");
+    }
+
+    /// <summary>连庄奖励表取值：<c>table[min(streak, 表长) - 1]</c>；空表（变体关闭）为 0。</summary>
+    private static int DealerStreakBonus(IReadOnlyList<int> table, byte streak)
+    {
+        if (table.Count == 0)
+        {
+            return 0;
+        }
+
+        int index = Math.Min(streak, table.Count) - 1;
+        return index < 0 ? 0 : table[index];
+    }
+
+    /// <summary>
+    /// 按契约口径从结算 payload、本局 RoundStarted 与事件重算本局四座 delta：
+    /// 杠分 + 自摸/七对 + 跟庄（赢家 ≠ 庄且变体开启）+ 连庄奖励（赢家 = 庄且表值大于 0）。
+    /// 变体金额取自内容目录，与结算实现同源；关闭时两项都不加。
+    /// </summary>
+    private static int[] ExpectedDelta(
+        RoundEndedPayload round,
+        RoundStartedPayload started,
+        IReadOnlyList<MeldPayload> kongs,
+        ContentVariants variants)
     {
         int[] delta = new int[GameState.PlayerCount];
         if (round.WinnerSeat < 0)
@@ -571,6 +789,24 @@ public sealed class GameSessionRoundSettlementTests
             delta[seat] = seat == round.WinnerSeat
                 ? delta[seat] + (3 * per)
                 : delta[seat] - per;
+        }
+
+        // 结算第 2 步跟庄：赢家不是庄家且变体开启；第 3 步连庄奖励：赢家就是庄家且本局表值大于 0。
+        if (round.WinnerSeat != started.BankerSeat)
+        {
+            if (variants.FollowingBanker > 0)
+            {
+                delta[round.WinnerSeat] += variants.FollowingBanker;
+                delta[started.BankerSeat] -= variants.FollowingBanker;
+            }
+        }
+        else
+        {
+            int bonus = DealerStreakBonus(variants.DealerStreakBonus, started.DealerStreak);
+            for (byte seat = 0; bonus > 0 && seat < GameState.PlayerCount; seat++)
+            {
+                delta[seat] = seat == started.BankerSeat ? delta[seat] + (3 * bonus) : delta[seat] - bonus;
+            }
         }
 
         return delta;

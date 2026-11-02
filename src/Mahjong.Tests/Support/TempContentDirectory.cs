@@ -30,6 +30,15 @@ public sealed class TempContentDirectory : IDisposable
     private readonly string _root;
 
     public TempContentDirectory()
+        : this(variantsJson: null)
+    {
+    }
+
+    /// <param name="variantsJson">
+    /// <c>rules.json</c> 的 <c>variants</c> 块对象文本；<c>null</c> 表示 rules.json 不含 variants 块。
+    /// 写入后立即重建清单，因此非法块也会走到「内容校验」而不是「哈希不符」。
+    /// </param>
+    public TempContentDirectory(string? variantsJson)
     {
         _root = Path.Combine(Path.GetTempPath(), "mahjong-content-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(_root, "tables"));
@@ -44,9 +53,17 @@ public sealed class TempContentDirectory : IDisposable
         WriteText("tiles.json", DefaultTilesJson);
         WriteText("suits.json", DefaultSuitsJson);
         WriteText("skills.json", DefaultSkillsJson);
-        WriteText("rules.json", DefaultRulesJson);
+        WriteText("rules.json", BuildRulesJson(variantsJson));
         RebuildManifest();
     }
+
+    /// <summary>拼 rules.json 文本：鬼牌固定为龙一，<paramref name="variantsJson"/> 为 null 时不写 variants 块。</summary>
+    public static string BuildRulesJson(string? variantsJson) =>
+        variantsJson is null
+            ? DefaultRulesJson
+            : "{\n  \"version\": 1,\n  \"joker\": { \"mode\": \"FixedType\", \"typeId\": 31 },\n  \"variants\": "
+              + variantsJson
+              + "\n}\n";
 
     public string Root => _root;
 

@@ -518,6 +518,147 @@ public sealed class ContentCatalogValidationTests
         Assert.Equal(32, catalog.ContentHash.Length);
     }
 
+    // ---------------- 规则变体（rules.json variants） ----------------
+
+    private const string LockedVariantsJson = """
+        {
+          "dealerStreakBonus": [0, 1, 2, 3],
+          "followingBanker": 1,
+          "horseBonus": 1,
+          "robbingKong": true,
+          "kongFlowerContract": true,
+          "twelveCardsContract": true
+        }
+        """;
+
+    [Fact]
+    public void Load_NoVariantsBlock_AllVariantsClosed()
+    {
+        using var content = new TempContentDirectory();
+        var variants = ContentCatalog.Load(content.Root).Variants;
+
+        Assert.Empty(variants.DealerStreakBonus);
+        Assert.Equal(0, variants.FollowingBanker);
+        Assert.Equal(0, variants.HorseBonus);
+        Assert.False(variants.RobbingKong);
+        Assert.False(variants.KongFlowerContract);
+        Assert.False(variants.TwelveCardsContract);
+    }
+
+    [Fact]
+    public void Load_EmptyVariantsObject_AllVariantsClosed()
+    {
+        using var content = new TempContentDirectory("{}");
+        var variants = ContentCatalog.Load(content.Root).Variants;
+
+        Assert.Empty(variants.DealerStreakBonus);
+        Assert.Equal(0, variants.FollowingBanker);
+        Assert.Equal(0, variants.HorseBonus);
+        Assert.False(variants.RobbingKong);
+        Assert.False(variants.KongFlowerContract);
+        Assert.False(variants.TwelveCardsContract);
+    }
+
+    [Fact]
+    public void Load_PartialVariantsBlock_MissingFieldsClosed()
+    {
+        using var content = new TempContentDirectory("""{ "dealerStreakBonus": [5, 6], "horseBonus": 2 }""");
+        var variants = ContentCatalog.Load(content.Root).Variants;
+
+        Assert.Equal(new[] { 5, 6 }, variants.DealerStreakBonus);
+        Assert.Equal(0, variants.FollowingBanker);
+        Assert.Equal(2, variants.HorseBonus);
+        Assert.False(variants.RobbingKong);
+        Assert.False(variants.KongFlowerContract);
+        Assert.False(variants.TwelveCardsContract);
+    }
+
+    [Fact]
+    public void Load_LockedVariantsBlock_ExposesAllSixFields()
+    {
+        using var content = new TempContentDirectory(LockedVariantsJson);
+        var catalog = ContentCatalog.Load(content.Root);
+
+        Assert.Equal(new[] { 0, 1, 2, 3 }, catalog.Variants.DealerStreakBonus);
+        Assert.Equal(1, catalog.Variants.FollowingBanker);
+        Assert.Equal(1, catalog.Variants.HorseBonus);
+        Assert.True(catalog.Variants.RobbingKong);
+        Assert.True(catalog.Variants.KongFlowerContract);
+        Assert.True(catalog.Variants.TwelveCardsContract);
+
+        // variants 块进入 contentHash：同一目录其余文件不变，只有块不同也必须换哈希。
+        using var closed = new TempContentDirectory();
+        Assert.NotEqual(ContentCatalog.Load(closed.Root).ContentHashHex, catalog.ContentHashHex);
+    }
+
+    [Fact]
+    public void Load_VariantsAtUpperBound_AreAccepted()
+    {
+        using var content = new TempContentDirectory(
+            """{ "dealerStreakBonus": [255], "followingBanker": 255, "horseBonus": 255 }""");
+        var variants = ContentCatalog.Load(content.Root).Variants;
+
+        Assert.Equal(new[] { 255 }, variants.DealerStreakBonus);
+        Assert.Equal(255, variants.FollowingBanker);
+        Assert.Equal(255, variants.HorseBonus);
+    }
+
+    [Fact]
+    public void Load_EmptyDealerStreakBonus_ThrowsWithFieldPath()
+    {
+        using var content = new TempContentDirectory("""{ "dealerStreakBonus": [] }""");
+
+        LoadFails(content, "rules.json", "variants.dealerStreakBonus");
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(256)]
+    public void Load_DealerStreakBonusItemOutOfRange_ThrowsWithFieldPath(int value)
+    {
+        using var content = new TempContentDirectory(
+            """{ "dealerStreakBonus": [0, """ + value + "] }");
+
+        LoadFails(content, "rules.json", "variants.dealerStreakBonus[1]");
+    }
+
+    [Theory]
+    [InlineData("followingBanker")]
+    [InlineData("horseBonus")]
+    public void Load_VariantAmountOutOfRange_ThrowsWithFieldPath(string field)
+    {
+        using var content = new TempContentDirectory("{ \"" + field + "\": 256 }");
+
+        LoadFails(content, "rules.json", "variants." + field);
+    }
+
+    [Theory]
+    [InlineData("robbingKong")]
+    [InlineData("kongFlowerContract")]
+    [InlineData("twelveCardsContract")]
+    public void Load_NonBooleanVariantFlag_Throws(string field)
+    {
+        using var content = new TempContentDirectory("{ \"" + field + "\": 1 }");
+
+        LoadFails(content, "rules.json", "variants." + field);
+    }
+
+    [Fact]
+    public void Load_UnknownVariantField_Throws()
+    {
+        using var content = new TempContentDirectory("""{ "unknownFlag": true }""");
+
+        LoadFails(content, "rules.json", "unknownFlag");
+    }
+
+    [Fact]
+    public void Load_VariantsWithWrongJsonType_Throws()
+    {
+        using var content = new TempContentDirectory("[]");
+
+        LoadFails(content, "rules.json", "variants");
+    }
+
     private static ContentLoadException LoadFails(
         TempContentDirectory content,
         string expectedRelativePath,

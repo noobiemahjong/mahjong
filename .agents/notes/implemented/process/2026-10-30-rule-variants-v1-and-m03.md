@@ -1,6 +1,6 @@
 # Agent Note: 规则变体进 v1 与 M0.3
 
-Status: implemented — D20/D22 与 M0.3 计划已落地，规则表待逐条评审。
+Status: implemented — D20/D22 与 M0.3 计划已落地，规则表 7/7 逐条签核定稿。
 
 ## Problem
 

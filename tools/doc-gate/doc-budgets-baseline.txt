@@ -43,6 +43,7 @@
 .agents/notes/implemented/process/2026-10-31-t7-budget-raise.md	8192
 .agents/notes/implemented/process/2026-10-31-team-taskbook-migration.md	8192
 .agents/notes/implemented/process/2026-11-01-m03-spec-split.md	8192
+.agents/notes/implemented/process/2026-11-02-m03-task-page-and-ledger-budget-raise.md	8192
 .agents/notes/implemented/process/2026-11-02-verification-by-change-surface.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
@@ -84,8 +85,8 @@ docs/milestones/M0.2/T-5-本地会话.md	10240
 docs/milestones/M0.2/T-6-Godot最小闭环.md	10240
 docs/milestones/M0.2/T-7-收口.md	10240
 docs/milestones/M0.3-规则完整化.md	12288
-docs/milestones/M0.3/T-1-规则表与数值定稿.md	10240
-docs/milestones/M0.3/T-2-庄家计分.md	10240
+docs/milestones/M0.3/T-1-规则表与数值定稿.md	14336
+docs/milestones/M0.3/T-2-庄家计分.md	14336
 docs/milestones/M0.3/T-3-抢杠与承包.md	10240
 docs/milestones/M0.3/T-4-中马.md	10240
 docs/milestones/M0.3/T-5-回归与收口.md	10240
@@ -106,7 +107,7 @@ docs/postmortem/README.md	4096
 docs/reference/README.md	4096
 docs/reference/game-event-engine.md	8192
 docs/reference/godot-aot.md	8192
-docs/reference/mutation-ledger.md	40960
+docs/reference/mutation-ledger.md	45056
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240

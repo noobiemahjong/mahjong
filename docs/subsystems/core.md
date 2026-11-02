@@ -5,13 +5,13 @@
 ## 1. 内容加载
 
 - 入口 `ContentCatalog.Load(contentDirectory)` 校验 4 个 JSON、`manifest.json` 与 6 个查表 `.bytes` 的哈希并返回只读快照；查表字节只参与哈希、不解析；JSON 与 manifest 的版本必须是 `ContentFormatVersion`（1）。
-- 固定清单是 10 个路径：4 个 JSON + `tables/{dictionary,ai_dictionary}_{normal,wind,dragon}.bytes`；`manifest.files` 缺项、多项或 `contentHash` 与重算值不一致都失败。
-- `tiles.json` 必须恰好 34 条、id 0–33 依次是万/筒/条 1–9、风 1–4、箭 1–3；`suits.json` 必须恰好 5 条并等于固定值（万/筒/条 9/4/可顺；风 4/4/不可顺；箭 3/4/不可顺）；`skills.json` 必须恰好 4 条，id 1–4 对应 `Pong`、`Kong`、`SelfDrawn`、`SelfDrawnWith7Pairs`。
-- `rules.json` 的 `joker.mode` 取 `None`/`FixedType`/`FlipIndicator`；`FixedType` 必须有存在的 `typeId`，`FlipIndicator` 抛 `NotSupportedException`，其余取值抛 `ContentLoadException`。
-- contentHash：逐文件 SHA-256 小写 hex，按路径 ordinal 升序拼 `v1\n` + 每行 `path=hash\n`，整体再 SHA-256；`ContentHash` 是原始 32 字节，`ContentHashHex` 是 64 位小写 hex。
-- 异常契约：参数 null/空白抛 `ArgumentException`；目录或文件缺失、JSON 不可解析、取值不符、未知字段、哈希不符抛 `ContentLoadException`；JSON 只走源生成上下文 `ContentJsonContext`（camelCase，未知成员报错），生产路径不用反射序列化。
-- 查询：`TileTypes`（按 id 升序）、`Suits`（按枚举值升序）、`Skills`（按 id 升序，元素是 `SkillDefinition`）与 `Joker`；三个 `Get*` 在 id 越界或枚举值未定义时抛 `ArgumentOutOfRangeException`。
-- `ContentPaths.Resolve()`：`MAHJONG_CONTENT_DIR` 非空白即权威（目录不存在直接失败、不回退）→ `AppContext.BaseDirectory/content` → 从当前目录逐级上找 `content/`，遇含 `global.json` 或 `.git` 的目录即停；失败抛 `ContentLoadException`，返回 content 根绝对路径（`tables` 由调用方拼）。
+- 固定清单 10 个路径：4 个 JSON + `tables/{dictionary,ai_dictionary}_{normal,wind,dragon}.bytes`；`manifest.files` 缺项、多项或 `contentHash` 与重算值不一致都失败。
+- `tiles.json` 恰好 34 条、id 0–33 依次是万/筒/条 1–9、风 1–4、箭 1–3；`suits.json` 恰好 5 条并等于固定值（万/筒/条 9/4/可顺；风 4/4/不可顺；箭 3/4/不可顺）；`skills.json` 恰好 4 条，id 1–4 对应 `Pong`、`Kong`、`SelfDrawn`、`SelfDrawnWith7Pairs`。
+- `rules.json` 的 `joker.mode` 取 `None`/`FixedType`/`FlipIndicator`；`FixedType` 须有存在的 `typeId`，`FlipIndicator` 抛 `NotSupportedException`，其余取值抛 `ContentLoadException`；`variants` 六字段缺省即关，非法值/未知字段拒载，`ContentCatalog.Variants` 只读。
+- contentHash：逐文件 SHA-256 小写 hex，按路径 ordinal 升序拼 `v1\n` + 每行 `path=hash\n`，整体再 SHA-256；`ContentHash` 原始 32 字节，`ContentHashHex` 64 位小写 hex。
+- 异常契约：参数 null/空白抛 `ArgumentException`；目录或文件缺失、JSON 不可解析、取值不符、未知字段、哈希不符抛 `ContentLoadException`；JSON 只走源生成上下文 `ContentJsonContext`（camelCase），生产路径不用反射序列化。
+- 查询：`TileTypes`（按 id 升序）、`Suits`（按枚举值升序）、`Skills`（按 id 升序，元素 `SkillDefinition`）与 `Joker`；三个 `Get*` 在 id 越界或枚举值未定义时抛 `ArgumentOutOfRangeException`。
+- `ContentPaths.Resolve()`：`MAHJONG_CONTENT_DIR` 非空白即权威（目录不存在直接失败、不回退）→ `AppContext.BaseDirectory/content` → 从当前目录逐级上找 `content/`，遇含 `global.json` 或 `.git` 即停；失败抛 `ContentLoadException`，返回 content 根绝对路径（`tables` 调用方拼）。
 
 ## 2. 查表
 

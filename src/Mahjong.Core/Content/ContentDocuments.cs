@@ -75,6 +75,23 @@ internal sealed class RulesDocument
 
     [JsonRequired]
     public JokerDocument? Joker { get; set; }
+
+    public VariantsDocument? Variants { get; set; }
+}
+
+internal sealed class VariantsDocument
+{
+    public int[]? DealerStreakBonus { get; set; }
+
+    public int? FollowingBanker { get; set; }
+
+    public int? HorseBonus { get; set; }
+
+    public bool? RobbingKong { get; set; }
+
+    public bool? KongFlowerContract { get; set; }
+
+    public bool? TwelveCardsContract { get; set; }
 }
 
 internal sealed class JokerDocument

@@ -74,6 +74,20 @@ public sealed class ContentCatalogTests
     }
 
     [Fact]
+    public void RepoContent_ExposesLockedVariantsBlock()
+    {
+        // T-1 §3 锁定块（6A）：六个键与取值由规格固定，仓库内容必须逐项一致。
+        var variants = LoadRepoContent().Variants;
+
+        Assert.Equal(new[] { 0, 1, 2, 3 }, variants.DealerStreakBonus);
+        Assert.Equal(1, variants.FollowingBanker);
+        Assert.Equal(1, variants.HorseBonus);
+        Assert.True(variants.RobbingKong);
+        Assert.True(variants.KongFlowerContract);
+        Assert.True(variants.TwelveCardsContract);
+    }
+
+    [Fact]
     public void RepoContent_ContentHashIsStableAndMatchesManifest()
     {
         var catalog = LoadRepoContent();

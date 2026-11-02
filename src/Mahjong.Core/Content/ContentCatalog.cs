@@ -7,6 +7,54 @@ using Mahjong.Core.Rules;
 namespace Mahjong.Core.Content;
 
 /// <summary>
+/// <c>rules.json</c> 的 <c>variants</c> 块：六项规则变体的开关与数值。
+/// 整个块或其中单个字段缺省即关闭（数组为空、数值 0、布尔 false）；关闭的变体不产生位、不计分。
+/// 实例由 <see cref="ContentCatalog"/> 校验后构造，构造后不可变。
+/// </summary>
+public sealed class ContentVariants
+{
+    /// <summary>全部变体关闭时的取值：空连庄表、数值 0、布尔 false。</summary>
+    public static ContentVariants Disabled { get; } = new([], 0, 0, false, false, false);
+
+    internal ContentVariants(
+        int[] dealerStreakBonus,
+        int followingBanker,
+        int horseBonus,
+        bool robbingKong,
+        bool kongFlowerContract,
+        bool twelveCardsContract)
+    {
+        DealerStreakBonus = Array.AsReadOnly(dealerStreakBonus);
+        FollowingBanker = followingBanker;
+        HorseBonus = horseBonus;
+        RobbingKong = robbingKong;
+        KongFlowerContract = kongFlowerContract;
+        TwelveCardsContract = twelveCardsContract;
+    }
+
+    /// <summary>
+    /// 连庄奖励表，按连庄次数升序；第 n 次连庄的金额是 <c>DealerStreakBonus[min(streak, Count) - 1]</c>。
+    /// 关闭时为空。每项取值 0–255，金额 0 表示该次连庄不付。
+    /// </summary>
+    public IReadOnlyList<int> DealerStreakBonus { get; }
+
+    /// <summary>跟庄金额：非庄家胡牌时庄家付给赢家的分数；0 表示关闭。</summary>
+    public int FollowingBanker { get; }
+
+    /// <summary>中马金额：每命中一匹马的支付分；0 表示关闭。</summary>
+    public int HorseBonus { get; }
+
+    /// <summary>是否启用抢杠：补杠的第 4 张被他人成胡时，由被抢杠者承包。</summary>
+    public bool RobbingKong { get; }
+
+    /// <summary>是否启用杠上开花承包：明杠补牌自摸胡时，由放杠者承包。</summary>
+    public bool KongFlowerContract { get; }
+
+    /// <summary>是否启用 12 张落地承包：4 个明副露且最后副露有供牌者时，由供牌者承包。</summary>
+    public bool TwelveCardsContract { get; }
+}
+
+/// <summary>
 /// 内容目录的只读快照：校验 tiles/suits/skills/rules 四个 JSON 与 manifest.json 之后可查询的内容视图。
 /// 查表字节只参与 manifest 的 SHA-256 校验，不在这里解析；查表由 TableCatalog 另行加载。
 /// </summary>
@@ -64,7 +112,13 @@ public sealed class ContentCatalog
     private readonly byte[] _contentHash;
     private readonly string _contentHashHex;
 
-    private ContentCatalog(TileType[] tileTypes, Suit[] suits, SkillDefinition[] skills, JokerRule joker, byte[] contentHash)
+    private ContentCatalog(
+        TileType[] tileTypes,
+        Suit[] suits,
+        SkillDefinition[] skills,
+        JokerRule joker,
+        ContentVariants variants,
+        byte[] contentHash)
     {
         _tileTypes = tileTypes;
         _suits = suits;
@@ -75,6 +129,7 @@ public sealed class ContentCatalog
         Suits = Array.AsReadOnly(suits);
         Skills = Array.AsReadOnly(skills);
         Joker = joker;
+        Variants = variants;
     }
 
     /// <summary>34 种牌，按 id 升序。</summary>
@@ -95,6 +150,9 @@ public sealed class ContentCatalog
     /// <summary>rules.json 决定的当前鬼牌规则；<see cref="JokerRule.Type"/> 是 tiles.json 里的牌种。</summary>
     public JokerRule Joker { get; }
 
+    /// <summary>rules.json 的 <c>variants</c> 块；块缺省时是 <see cref="ContentVariants.Disabled"/>。</summary>
+    public ContentVariants Variants { get; }
+
     /// <summary>加载内容目录：校验 4 个 JSON、manifest 与 6 个查表文件的哈希，不解析查表内容。</summary>
     /// <param name="contentDirectory"><c>content/</c> 根目录的路径。</param>
     /// <exception cref="ArgumentException"><paramref name="contentDirectory"/> 为 null 或空白。</exception>
@@ -114,7 +172,7 @@ public sealed class ContentCatalog
         var tileTypes = ParseTiles(tilesBytes, Combine(root, "tiles.json"));
         var suits = ParseSuits(suitsBytes, Combine(root, "suits.json"));
         var skills = ParseSkills(skillsBytes, Combine(root, "skills.json"));
-        var joker = ParseRules(rulesBytes, Combine(root, "rules.json"), tileTypes);
+        var rules = ParseRules(rulesBytes, Combine(root, "rules.json"), tileTypes);
 
         var cachedFiles = new Dictionary<string, byte[]>(StringComparer.Ordinal)
         {
@@ -125,7 +183,7 @@ public sealed class ContentCatalog
         };
         var contentHash = VerifyManifest(root, cachedFiles);
 
-        return new ContentCatalog(tileTypes, suits, skills, joker, contentHash);
+        return new ContentCatalog(tileTypes, suits, skills, rules.Joker, rules.Variants, contentHash);
     }
 
     /// <summary>按 typeId 取牌种。</summary>
@@ -415,7 +473,7 @@ public sealed class ContentCatalog
         return skills;
     }
 
-    private static JokerRule ParseRules(byte[] utf8Json, string path, TileType[] tileTypes)
+    private static RulesSnapshot ParseRules(byte[] utf8Json, string path, TileType[] tileTypes)
     {
         var document = Deserialize(utf8Json, path, ContentJsonContext.Default.RulesDocument);
         if (document.Version != ContentFormatVersion)
@@ -423,15 +481,21 @@ public sealed class ContentCatalog
             throw new ContentLoadException(path, $"version must be {ContentFormatVersion} but was {document.Version}.");
         }
 
-        var joker = document.Joker ?? throw new ContentLoadException(path, "joker is required.");
-        var mode = ParseJokerMode(joker.Mode, path);
+        var variants = ParseVariants(document.Variants, path);
+        return new RulesSnapshot(ParseJoker(document.Joker, path, tileTypes), variants);
+    }
+
+    private static JokerRule ParseJoker(JokerDocument? joker, string path, TileType[] tileTypes)
+    {
+        var document = joker ?? throw new ContentLoadException(path, "joker is required.");
+        var mode = ParseJokerMode(document.Mode, path);
         switch (mode)
         {
             case JokerMode.None:
                 return new JokerRule(JokerMode.None, null);
 
             case JokerMode.FixedType:
-                var typeId = joker.TypeId
+                var typeId = document.TypeId
                     ?? throw new ContentLoadException(path, "joker.typeId is required when joker.mode is 'FixedType'.");
                 if (typeId < 0 || typeId >= tileTypes.Length)
                 {
@@ -447,9 +511,67 @@ public sealed class ContentCatalog
                     $"Content load failed for '{path}': joker.mode 'FlipIndicator' is not supported in content format v1.");
 
             default:
-                throw new ContentLoadException(path, $"joker.mode '{joker.Mode ?? "<null>"}' is not supported.");
+                throw new ContentLoadException(path, $"joker.mode '{document.Mode ?? "<null>"}' is not supported.");
         }
     }
+
+    private static ContentVariants ParseVariants(VariantsDocument? document, string path)
+    {
+        if (document is null)
+        {
+            return ContentVariants.Disabled;
+        }
+
+        int[] dealerStreakBonus;
+        if (document.DealerStreakBonus is null)
+        {
+            dealerStreakBonus = [];
+        }
+        else
+        {
+            if (document.DealerStreakBonus.Length == 0)
+            {
+                throw new ContentLoadException(path, "variants.dealerStreakBonus must contain at least 1 entry.");
+            }
+
+            dealerStreakBonus = (int[])document.DealerStreakBonus.Clone();
+            for (var index = 0; index < dealerStreakBonus.Length; index++)
+            {
+                var value = dealerStreakBonus[index];
+                if (value < 0 || value > 255)
+                {
+                    throw new ContentLoadException(
+                        path,
+                        $"variants.dealerStreakBonus[{index}] must be within 0-255 but was {value}.");
+                }
+            }
+        }
+
+        return new ContentVariants(
+            dealerStreakBonus,
+            ParseVariantAmount(document.FollowingBanker, "variants.followingBanker", path),
+            ParseVariantAmount(document.HorseBonus, "variants.horseBonus", path),
+            document.RobbingKong ?? false,
+            document.KongFlowerContract ?? false,
+            document.TwelveCardsContract ?? false);
+    }
+
+    private static int ParseVariantAmount(int? value, string fieldPath, string path)
+    {
+        if (value is null)
+        {
+            return 0;
+        }
+
+        if (value < 0 || value > 255)
+        {
+            throw new ContentLoadException(path, $"{fieldPath} must be within 0-255 but was {value}.");
+        }
+
+        return value.Value;
+    }
+
+    private readonly record struct RulesSnapshot(JokerRule Joker, ContentVariants Variants);
 
     private static JokerMode ParseJokerMode(string? value, string path) => value switch
     {

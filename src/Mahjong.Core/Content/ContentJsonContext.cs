@@ -13,6 +13,7 @@ namespace Mahjong.Core.Content;
 [JsonSerializable(typeof(SuitsDocument))]
 [JsonSerializable(typeof(SkillsDocument))]
 [JsonSerializable(typeof(RulesDocument))]
+[JsonSerializable(typeof(VariantsDocument))]
 [JsonSerializable(typeof(ManifestDocument))]
 internal sealed partial class ContentJsonContext : JsonSerializerContext
 {

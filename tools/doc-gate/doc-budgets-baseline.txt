@@ -124,4 +124,4 @@ tools/git-hooks/README.md	4096
 tools/team-taskbook/README.md	4096
 tools/team-taskbook/templates/batch-contract.md	8192
 tools/team-taskbook/templates/cell-brief.md	10240
-tools/team-taskbook/templates/lead-brief.md	20480
+tools/team-taskbook/templates/lead-brief.md	22528

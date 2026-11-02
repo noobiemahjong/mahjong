@@ -18,7 +18,7 @@
 - **只读优先**：查表/回放检查工具默认不写仓库；需要写时输出到临时目录，并说明。
 - **禁止手改生成物**：生成器产物只由工具重跑产生；工具与产物同批提交。
 - **门禁确定性**：同一输入同一退出码；规则变更必须同步 [docs/AGENTS.md](../docs/AGENTS.md) 的门禁表。
-- **工具自带模板预算**：超过 `docs/AGENTS.md` 预算表「模板 4KB」时按提额流程在 `doc-budgets.json` 登记，并在 Note 写理由（例：`tools/team-taskbook/templates/lead-brief.md` 20480）。
+- **工具自带模板预算**：超过 `docs/AGENTS.md` 预算表「模板 4KB」时按提额流程在 `doc-budgets.json` 登记，并在 Note 写理由（例：`tools/team-taskbook/templates/lead-brief.md` 22528）。
 - **不碰外部资产**：旧 Unity 项目、`E:/learn` 下的参考仓只读；修改需明确授权。
 - **MCP 写操作**（场景/资产/导入）必须属于已确认任务；工具不得隐式触发。
 - 工具目录：`tools/doc-gate/`、`tools/git-hooks/`、`tools/aot-smoke/`、`tools/build-android/`、`tools/benchmarks/`、`tools/team-taskbook/`；每个工具有 `README.md` 与可复制命令。

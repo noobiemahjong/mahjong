@@ -507,7 +507,7 @@
     },
     {
       "path": "tools/team-taskbook/templates/lead-brief.md",
-      "limitBytes": 20480
+      "limitBytes": 22528
     }
   ]
 }

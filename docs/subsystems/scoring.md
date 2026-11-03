@@ -9,7 +9,7 @@
 - 单次计分动作先完成全部校验、再一次性写暂存，失败不改变任何状态；`Release` 与 `RollbackRound` 幂等。
 - `RoundDelta`/`TotalScores` 是长度恒为 4 的 `ReadOnlyCollection<short>` 实时视图：后续计分动作可见，但通过视图写入抛 `NotSupportedException`，不能改内部状态。
 - `RoundActionType` 只读，`Release`/`RollbackRound` 后回到 `ScoreActionType.None`。
-- 金额上界：单次自摸单座最多 +24（七对与杠上开花互斥，各自只能再乘一次 ×2），单次杠单座最多 +6；每局单座净额是这些动作的累加，8 局累计远小于 `short` 的 ±32767，用 `short` 记账且不做溢出保护。
+- 金额上界：单次动作单座最多 +24（七对与杠上开花互斥，各自只能再乘一次 ×2），单次杠单座最多 +6；每局净额是动作累加，8 局累计远小于 `short` 上界，账本用 `short` 且不做溢出保护。
 - 实例非线程安全；座位固定 4 个。
 
 ## 2. 番种与杠位位集
@@ -26,9 +26,18 @@
 | `KongSupplement` | 16 | 补杠 |
 | `KongUpFlower` | 32 | 杠上开花 |
 | `NoJoker` | 64 | 无鬼牌自摸 |
+| `DealerStreak` | 128 | 连庄奖励 |
+| `FollowingTheBanker` | 256 | 跟庄 |
+| `HorseWinner` | 512 | 中马 |
+| `RobbingTheKong` | 1024 | 抢杠 |
+| `RobbingTheKongPayForEveryone` | 2048 | 抢杠包三家 |
+| `KongUpFlowerPayForEveryone` | 4096 | 杠上开花包三家 |
+| `TwelveCardsConceded` | 8192 | 12 张落地承包 |
 
-- 未定义位（不在以上并集）是非法输入，`Apply` 用 `(value | defined) == defined` 判定。
-- 三种杠位的并集用于「七对须 0 副露」与「杠上开花须有杠」的判定。
+- 未定义位由 `Apply` 拒绝：掩码 `AllActionTypes` 是上表全部非 `None` 位的并集（14 位），含未定义位（如 16384）抛 `ArgumentOutOfRangeException` 且不改暂存；具名入口只写常量位，不做掩码校验。
+- 一位规则在收付两侧置同一位；二位规则正位只进赢家笔、负位只进 payer 笔；赢家笔在杠上开花时仍置 `SelfDrawn | KongUpFlower`；`RoundActionType` 是本局各笔位置的并集。
+- `KongActions` 仍是三种杠位（3 位）的并集，只服务「七对须 0 副露」与「杠上开花须有杠」两条组合校验，不随规则位扩容。
+- 金额与 payer 的唯一家是 [T-1 §2](../milestones/M0.3/T-1-规则表与数值定稿.md#2-支付与叠加口径)，位值总表见 [T-1 §4](../milestones/M0.3/T-1-规则表与数值定稿.md#4-事件协议回放字段总表)。
 
 ## 3. 自摸与杠
 
@@ -87,6 +96,6 @@
 
 - `RoundResult` 构造器公开：会话在 `Release` 之后用 `RoundResult` 构造 `RoundEnded` payload（`winnerSeat`/`scoreDelta`/`actionType`）；`RoundRanking.Rank` 是终局名次唯一实现，`RoundController.Rank` 委托同一实现。
 - `ApplySevenPairsSelfDrawn(winnerSeat, hasJoker)` 只结算七对：每家付 `(hasJoker ? 2 : 4) * 2`、赢家收三份，置位 `SelfDrawn | SevenPairs`（无鬼再置 `NoJoker`），不检查本局其他座位的杠位。
-- 杠分：会话在杠 `Commit` 之后调 `ApplyKong(seat, kind, sourceSeat)`；`kongUpFlower` 精确口径是「赢家本回合最近一次摸牌为杠后补牌」，由会话跟踪布尔，不使用局内杠位聚合（其他家的杠不算），七对恒不适用。
+- 杠分：会话在杠 `Commit` 之后调 `ApplyKong(seat, kind, sourceSeat)`；`kongUpFlower` 精确口径是「赢家本回合最近一次摸牌来自明杠补牌」，最近摸牌来源由会话按四值枚举 `DrawSource`（普通/明杠补/补杠补/暗杠补）跟踪，不使用局内杠位聚合（其他家的杠不算），七对恒不适用。
 - 结算顺序：会话先取样 `RoundDelta` 与 `RoundActionType` → `Release` → 写回 `PlayerState.Score` 镜像 → 构造 `RoundResult` → 产 `RoundEnded`；流局 `RollbackRound` + `Release` 后同样写回镜像。
 - T-3 的 `RunRound` 不产生杠、自摸恒传 `kongUpFlower: false`；真实会话用单根协程、响应窗口与请求/超时，不复用 `RunRound` 的脚本命令与默认出牌。

@@ -79,6 +79,36 @@ public sealed class BotPolicyDeterminismTests
         Assert.Equal(firstHash, repeatedHash);
     }
 
+    [Fact]
+    public void SameSeed_ProducesSamePerSeatScoresHandsAndDiscards()
+    {
+        BotGameRun first = Run(42);
+        BotGameRun second = Run(42);
+
+        string firstSnapshot = SeatSnapshot(first.State);
+        string secondSnapshot = SeatSnapshot(second.State);
+
+        // 逐座分区文本相等（不是「两次都为空」）：快照必须真的带出分数、手牌与弃牌序列。
+        Assert.Equal(firstSnapshot, secondSnapshot);
+        Assert.Contains("score=", firstSnapshot, StringComparison.Ordinal);
+        Assert.Contains("hand=", firstSnapshot, StringComparison.Ordinal);
+        Assert.Contains("discards=", firstSnapshot, StringComparison.Ordinal);
+        Assert.Equal(136, BotTestSupport.TotalTiles(first.State));
+        Assert.Equal(136, BotTestSupport.TotalTiles(second.State));
+    }
+
+    /// <summary>逐座快照文本：座位号、累计分、手牌物理 id 序列、弃牌物理 id 序列。</summary>
+    private static string SeatSnapshot(GameState state) => string.Join(
+        "|",
+        Enumerable.Range(0, GameState.PlayerCount).Select(seat =>
+        {
+            PlayerState player = state.Players[seat];
+            return "seat" + seat
+                + ";score=" + player.Score
+                + ";hand=" + string.Join(',', player.Hand.Items.Select(tile => tile.Id))
+                + ";discards=" + string.Join(',', player.Discards.Items.Select(tile => tile.Id));
+        }));
+
     private static BotGameRun Run(ulong seed)
     {
         var wins = new ProgrammableWinChecker();

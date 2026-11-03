@@ -122,8 +122,7 @@ PY
 
 ## 4. 与上游算法仓库的关系（重要）
 
-上游仓库：https://github.com/gaodayihao/majiang_algorithm （README 指向 `esrrhs/majiang_algorithm`，MIT）。
-仓库当前提供 `data/majiang_clien_*.txt`、`majiang_server_*.txt`、`majiang_ai_*.txt`，以及 Java/Go/C++ 三份实现。
+上游仓库：https://github.com/gaodayihao/majiang_algorithm （README 指向 `esrrhs/majiang_algorithm`，MIT）。仓库当前提供 `data/majiang_clien_*.txt`、`majiang_server_*.txt`、`majiang_ai_*.txt`，以及 Java/Go/C++ 三份实现。
 
 ### 4.1 文本格式与 key 编码是兼容的
 
@@ -178,3 +177,11 @@ key gui jiang hu [description...]
 - 数据来源：旧项目自研（C# 实现生成）；上游仓库为 MIT。
 - 建议在 `content/manifest.json` 中记录这 6 个文件的 sha256；构建时校验。
 - 若将来引入上游数据，必须在文档中标注具体 upstream commit（当前数据自 2018 起未变，仓库重构提交为 `3fd96a9ef3`，2026-10-02）。
+
+---
+
+## 7. `content/rules.json` 的 `variants` 段
+
+`variants` 是规则开关段，与 6 个查表 `.bytes` 同在内容目录、一起参与 `contentHash`，但不进查表加载；六键为 `dealerStreakBonus`（数组）、`followingBanker`、`horseBonus`（数值）、`robbingKong`、`kongFlowerContract`、`twelveCardsContract`（布尔）。
+
+- 缺省、校验与键表见 [T-1 §3](milestones/M0.3/T-1-规则表与数值定稿.md#3-contentrulesjson-schema)（唯一家）；加载链与 `ContentCatalog.Variants` 快照见 [core.md §1](subsystems/core.md#1-内容加载)；各键对应的行为步骤见 [规则变体 cookbook](cookbook/rules-variants.md)。

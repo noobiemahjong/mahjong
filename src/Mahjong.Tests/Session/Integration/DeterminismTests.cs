@@ -32,10 +32,35 @@ public sealed class DeterminismTests
         Assert.True(second.GameOver);
         Assert.True(first.Events.Count > 100, "整场事件流过短，确定性断言可能空转。");
 
-        // 终局状态与总分。
+        // 终局状态与总分（哈希必须真的算出 64 位小写 hex，不是两边都拿空串比出「相等」）。
+        Assert.Matches("^[0-9a-f]{64}$", first.FinalStateHash);
+        Assert.Matches("^[0-9a-f]{64}$", second.FinalStateHash);
         Assert.Equal(first.FinalStateHash, second.FinalStateHash);
         Assert.Equal(first.MirrorScores, second.MirrorScores);
+        Assert.Contains(first.MirrorScores, score => score != 0);
         Assert.Equal(first.SubmitResults.Count, second.SubmitResults.Count);
+
+        // 8 局结构：两遍都必须是 8 条 RoundStarted、8 条 RoundEnded、1 条 GameEnded。
+        Assert.Equal(8, first.Events.Count(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundStarted));
+        Assert.Equal(8, second.Events.Count(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundStarted));
+        Assert.Equal(8, first.Events.Count(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded));
+        Assert.Equal(8, second.Events.Count(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded));
+        Assert.Single(first.Events, sessionEvent => sessionEvent.Kind == SessionEventKind.GameEnded);
+        Assert.Single(second.Events, sessionEvent => sessionEvent.Kind == SessionEventKind.GameEnded);
+
+        // 翻马序列：逐项（tick + payload hex）相等，且序列非空——「两次都为空」不算一致。
+        string[] firstHorse = HorseSequence(first.Events);
+        string[] secondHorse = HorseSequence(second.Events);
+        Assert.NotEmpty(firstHorse);
+        Assert.Equal(firstHorse, secondHorse);
+        Assert.All(firstHorse, entry => Assert.Matches("^[0-9]+:[0-9A-F]{6}$", entry));
+
+        // 逐局 scoreDelta：8 条、逐条相等，且至少一局非零（全零相等不构成确定性证据）。
+        string[] firstDeltas = RoundDeltaTexts(first.Events);
+        string[] secondDeltas = RoundDeltaTexts(second.Events);
+        Assert.Equal(8, firstDeltas.Length);
+        Assert.Equal(firstDeltas, secondDeltas);
+        Assert.Contains(firstDeltas, text => text != "0,0,0,0");
 
         // 事件流逐字节一致：Seq|Tick|Kind|Payload hex 文本相同。
         Assert.Equal(first.SerializedEvents, second.SerializedEvents);
@@ -60,5 +85,19 @@ public sealed class DeterminismTests
         Assert.Equal(firstEnded.TotalScores, secondEnded.TotalScores);
         Assert.Equal(firstEnded.Ranking, secondEnded.Ranking);
         Assert.Equal(firstEnded.ReplayId, secondEnded.ReplayId);
+        Assert.Equal(0, firstEnded.TotalScores.Sum());
+        Assert.Equal(firstEnded.TotalScores, first.MirrorScores.Select(score => (int)score).ToArray());
     }
+
+    /// <summary>翻马序列文本：<c>tick:payload-hex</c>；用于逐项比对，不使用「都相等」的空断言。</summary>
+    private static string[] HorseSequence(IReadOnlyList<SessionEvent> events) =>
+        [.. events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.HorseRevealed)
+            .Select(sessionEvent => sessionEvent.Tick + ":" + Convert.ToHexString(sessionEvent.Payload.Span))];
+
+    /// <summary>逐局 scoreDelta 文本：<c>a,b,c,d</c>；四座顺序固定，用于逐局比对。</summary>
+    private static string[] RoundDeltaTexts(IReadOnlyList<SessionEvent> events) =>
+        [.. events
+            .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
+            .Select(sessionEvent => string.Join(',', SessionEventPayloadReader.ReadRoundEnded(sessionEvent).ScoreDelta))];
 }

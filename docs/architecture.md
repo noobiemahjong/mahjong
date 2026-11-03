@@ -22,7 +22,7 @@
 
 命令不进调度器：调用方在 `Step` 前用 `CommandQueue.DrainForTick(tick)` 取 `ReceivedTick <= tick` 快照并应用，调度器不认识 `GameCommand`。
 
-局面由 `GameState` 承载：`Deal`/`DrawFromWall`/`DrawFromTail`/`Discard`/`DeclareMeld` 维护牌与区域；`StateHash.Compute` 编码 SHA-256 小写 hex。
+局面由 `GameState` 承载：`Deal`/`DrawFromWall`/`DrawFromTail`/`Discard`/`DeclareMeld` 维护牌与区域，`Revealed` 是公共揭示区（翻马追加、`Deal` 清空）；`StateHash.Compute` 按布局 3 编码 SHA-256 小写 hex。
 
 事件侧只有 `GameEventArgs`（`GameState` + 可选 `Payload`）与 `Trigger` 基类，没有触发器注册表或派发器。
 
@@ -30,7 +30,7 @@
 
 本地会话把各层装成 tick 机器：`GameSession.Step` 先处理到期 Bot 应答，再调 `ActionScheduler.Step`（内部先 `BeginTick` 结算请求），最后记录 tick；单根协程经 `WaitUntil` 等请求结算，事件写进 `SessionEventBuffer`、由 `DrainEvents` 破坏性取出。
 
-轮次驱动 `RoundController` 在没有会话时跑完 8 局：`Deal` 后庄家摸第 14 张，按 `RoundCommand` 脚本出牌或自摸，结算走 `ScoreManager` 暂存→`Release`（流局回滚净 0），每局写回 `PlayerState.Score` 镜像并轮换庄家；`RoundResult` 供会话构造 `RoundEnded` payload。
+轮次驱动 `RoundController` 在没有会话时跑完 8 局：`Deal` 后庄家摸第 14 张，按 `RoundCommand` 脚本出牌或自摸，结算走 `ScoreManager` 暂存→`Release`（流局回滚净 0），每局写回 `PlayerState.Score` 镜像并轮换庄家；`RoundResult` 供会话构造 `RoundEnded` payload。会话侧的 8 局循环另维护 `dealerStreak`，每局随 `RoundStarted` 下发，胡牌按胡牌金额→跟庄→连庄→中马→收尾五步结算，马牌落在 `Revealed`。
 
 Bot 决策也在调度器之外：`SimpleBotPolicy.Decide` 只读 `BotContext`（局面、自身、可用技能、目标弃牌与刚摸的牌）返回 `BotDecision`；自己回合按 七对自摸→普通自摸→出牌，响应窗口按 杠→碰→过，非「过」选择先经 `CardAndSkillVerifier`；策略不消费随机、不改局面，`GameSession` 按 tick 延迟驱动。
 

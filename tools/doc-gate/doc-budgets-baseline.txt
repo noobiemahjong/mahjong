@@ -16,6 +16,7 @@
 .agents/notes/implemented/architecture/2026-10-30-skill-and-response-window.md	8192
 .agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md	8192
 .agents/notes/implemented/architecture/2026-10-30-win-checker-table-traversal.md	8192
+.agents/notes/implemented/architecture/2026-11-03-state-hash-layout-v3-revealed.md	8192
 .agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md	8192
 .agents/notes/implemented/feature/2026-10-30-scoring-and-round-controller.md	8192
 .agents/notes/implemented/feature/2026-10-31-autoplay-and-perf-baseline.md	8192
@@ -45,6 +46,9 @@
 .agents/notes/implemented/process/2026-11-01-m03-spec-split.md	8192
 .agents/notes/implemented/process/2026-11-02-m03-task-page-and-ledger-budget-raise.md	8192
 .agents/notes/implemented/process/2026-11-02-verification-by-change-surface.md	8192
+.agents/notes/implemented/process/2026-11-03-architecture-doc-budget-raise.md	8192
+.agents/notes/implemented/process/2026-11-03-m03-closeout-budget-raise.md	8192
+.agents/notes/implemented/process/2026-11-03-review-session-independence.md	8192
 .agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md	8192
 .agents/notes/rejected/process/2026-10-28-rejected-v1-design-space.md	8192
 AGENTS.md	6144
@@ -53,10 +57,11 @@ README.md	4096
 docs/AGENTS.md	6144
 docs/DESIGN.md	65536
 docs/TABLES.md	16384
-docs/architecture.md	8192
+docs/architecture.md	10240
 docs/cookbook/aot-export.md	10240
 docs/cookbook/build.md	8192
 docs/cookbook/play.md	8192
+docs/cookbook/rules-variants.md	10240
 docs/cookbook/run.md	8192
 docs/development.md	8192
 docs/engineering/README.md	4096
@@ -87,9 +92,9 @@ docs/milestones/M0.2/T-7-收口.md	10240
 docs/milestones/M0.3-规则完整化.md	12288
 docs/milestones/M0.3/T-1-规则表与数值定稿.md	14336
 docs/milestones/M0.3/T-2-庄家计分.md	14336
-docs/milestones/M0.3/T-3-抢杠与承包.md	10240
-docs/milestones/M0.3/T-4-中马.md	10240
-docs/milestones/M0.3/T-5-回归与收口.md	10240
+docs/milestones/M0.3/T-3-抢杠与承包.md	14336
+docs/milestones/M0.3/T-4-中马.md	14336
+docs/milestones/M0.3/T-5-回归与收口.md	16384
 docs/milestones/M1-回放与流正式化.md	12288
 docs/milestones/M1-实施规格.md	16384
 docs/milestones/M2-实施规格.md	16384
@@ -107,7 +112,7 @@ docs/postmortem/README.md	4096
 docs/reference/README.md	4096
 docs/reference/game-event-engine.md	8192
 docs/reference/godot-aot.md	8192
-docs/reference/mutation-ledger.md	45056
+docs/reference/mutation-ledger.md	65536
 docs/specs/discovery.md	10240
 docs/specs/protocol.md	10240
 docs/specs/replay-format.md	10240

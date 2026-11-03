@@ -32,19 +32,21 @@
 | type | 名称 | payload |
 |---|---|---|
 | 0x01 | Batch | `frameCount u16 + (type u8 + payload)[]`（同一 tick 合并） |
-| 0x10 | RoundStarted | 同 M0.2 T-5 §1.1 + M0.3（dealerStreak） |
-| 0x11 | TurnStarted | 同上 |
-| 0x12 | Drew | 同上（全景：真实 tileId） |
-| 0x13 | Discarded | 同上 |
-| 0x14 | Meld | 同上 |
-| 0x15 | RequestOpened | 同上 |
-| 0x16 | RequestClosed | 同上 |
-| 0x17 | RoundEnded | 同上 |
-| 0x18 | GameEnded | 同上 |
-| 0x19 | SeatStateChanged | 同上 |
-| 0x1A | HorseRevealed | 同 [M0.3 T-4 §3](../milestones/M0.3/T-4-中马.md#3-事件与载荷)（horseSeat、tileId 公开） |
+| 0x10 | RoundStarted | `roundNo u8, bankerSeat u8, wallCount u16, dealerStreak u8`（5B）；前四字段同 M0.2 T-5 |
+| 0x11 | TurnStarted | 同 M0.2 T-5 |
+| 0x12 | Drew | 同 M0.2 T-5（全景：真实 tileId） |
+| 0x13 | Discarded | 同 M0.2 T-5 |
+| 0x14 | Meld | 同 M0.2 T-5 |
+| 0x15 | RequestOpened | 同 M0.2 T-5 |
+| 0x16 | RequestClosed | 同 M0.2 T-5 |
+| 0x17 | RoundEnded | 同 M0.2 T-5 |
+| 0x18 | GameEnded | 同 M0.2 T-5 |
+| 0x19 | SeatStateChanged | 同 M0.2 T-5 |
+| 0x1A | HorseRevealed | `horseSeat u8, tileId u16`（3B，公开；tileId 为物理牌） |
 
-payload 字段表以 [M0.2 T-5 §1.1](../milestones/M0.2/T-5-本地会话.md#11-事件-payload权威布局) 与 [M0.3 T-1 §4](../milestones/M0.3/T-1-规则表与数值定稿.md#4-事件协议回放字段总表) 为权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
+payload 字段表以 [M0.2 T-5](../milestones/M0.2/T-5-本地会话.md) 与 [M0.3 T-1 §4](../milestones/M0.3/T-1-规则表与数值定稿.md#4-事件协议回放字段总表) 为权威；本文件只加“全景”差异（所有 tileId 都真实）。事件编码为**手写二进制**，不使用 JSON/MessagePack。
+
+`0x1A` 与本地 `SessionEventKind.HorseRevealed = 13` 对应，两域映射的唯一家是 [M0.3 T-1 §4](../milestones/M0.3/T-1-规则表与数值定稿.md#4-事件协议回放字段总表)。
 
 ## 4. Index 与 Trailer
 
@@ -67,8 +69,10 @@ Index 位于 Body 之后、Trailer 之前：
 
 ## 5. 播放规则
 
-- 只允许 `rulesVersion + contentHash` 匹配的客户端播放；不匹配拒绝并提示。
+- 只允许 `rulesVersion + contentHash` 匹配的客户端播放；不匹配拒绝并提示，不迁移、不改写文件。
+- 按 `rulesVersion` 1 录制、且 `RoundStarted` 仍是 4B 的旧 `.mjr` 在回放侧按本节版本匹配直接拒播；联机加入路径的 `Reject(reason=1)`（rules 不匹配）是协议侧独立分支，见 [protocol §2](protocol.md#2-握手加入)，两条路径分开表述、互不替代。
 - 选局：从头静默重放到该局 startTick；快进/快退/拖动同理；M1 不依赖 checkpoint。
+- `HorseRevealed` 按 `0x1A` 入流，回放侧按事件序重建马座位与公共揭示区，不解析 seed、不重跑规则；墙空不产事件、不改终态哈希。
 - 全景：播放器强制所有手牌可见，UI 标注“全景回放”。
 - 回放只读；不产生输入。
 - 未完成回放：`flags bit0=0`；播放器提示“未完成”，只播到最后一个完整局。

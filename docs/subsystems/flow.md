@@ -50,7 +50,7 @@
 
 - `IRequestRegistry` 两个方法：`BeginTick(tick)` 把到期未应答的请求写成超时、把被取消的请求写成取消；`TryConsume(requestId, out outcome)` 同一结算只成功一次。
 - `RequestOutcomeKind : byte` 取 Answered 0、TimedOut 1、Cancelled 2；`RequestOutcome(long RequestId, RequestOutcomeKind Kind, object? Payload)` 是一次结算。
-- `RequestKind : byte` 取 Discard 0、Pong 1、Kong 2、Win 3、Pass 4；`PendingRequest(long RequestId, byte Seat, RequestKind Kind, AllowedVerbs Allowed, long DeadlineTick)` 是待结算请求。
+- `RequestKind : byte` 取 Discard 0、Pong 1、Kong 2、Win 3、Pass 4、RobbingKong 5；`PendingRequest(long RequestId, byte Seat, RequestKind Kind, AllowedVerbs Allowed, long DeadlineTick)` 是待结算请求。
 - `RequestGroup(long requestGroupId, IEnumerable<PendingRequest> requests)` 是同一时刻向多个座位征询的只读快照，构造时复制传入集合、顺序保持；弃牌响应窗口的仲裁与逐座结算见 §8，注册表挂接由会话适配。
 
 ## 6. 触发器与事件参数
@@ -60,11 +60,12 @@
 
 ## 7. 状态哈希
 
-`StateHash.Compute(GameState)` 把模型字段按固定布局编码后取 SHA-256，返回 64 字符小写 hex；整型小端、长度前缀 `u16`、布局版本 2 写在首字节。
+`StateHash.Compute(GameState)` 把模型字段按固定布局编码后取 SHA-256，返回 64 字符小写 hex；整型小端、长度前缀 `u16`、布局版本 3 写在首字节。
 
 ```
-u8  version = 2
+u8  version = 3
 u16 wallCount + wallCount × u16 tileId        // 槽位顺序，不排序
+u16 revealedCount + revealedCount × u16 tileId  // 公共揭示区，紧跟牌墙
 u8  playerCount (= 4)
 per seat:
   u8  seat
@@ -79,7 +80,8 @@ u16 roundNo
 ```
 
 - 只哈希模型字段：不含时间、会话、日志、内容清单与规则版本；动作树与请求状态不参与。
-- 先按布局量出字节数再一次性分配写入；`state` 为 null 抛 `ArgumentNullException`；同一实现同输入必得同一 hex，跨实现对齐以本布局为准；布局背景见 [单牌墙 Note](../../.agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md)。
+- 公共揭示区是 `GameState.Revealed`（区域 id `ZoneId(PublicSeat, ZoneKind.Revealed)`），按牌翻出的顺序编码；`GameState.Deal` 清空它，跨局不累积。
+- 先按布局量出字节数再一次性分配写入；`state` 为 null 抛 `ArgumentNullException`；同一实现同输入必得同一 hex，跨实现对齐以本布局为准；布局背景见 [单牌墙 Note](../../.agents/notes/implemented/architecture/2026-10-30-single-wall-no-reserved-tail.md)，v3 段位见 [布局 v3 Note](../../.agents/notes/implemented/architecture/2026-11-03-state-hash-layout-v3-revealed.md)。
 
 ## 8. 弃牌响应窗口
 

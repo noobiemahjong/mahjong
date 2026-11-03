@@ -44,3 +44,11 @@
 - 自摸张数口径由校验器先挡：`Pong` 13、`Kong` 13 或 14、自摸与七对 14；判定器自身的 14 张检查是第二道闸，两处都通过才提交。
 - 组装根 `LocalSessionFactory` 用 `TableCatalog` 建 `WinChecker`，`GameSession` 只接收 `IWinChecker`；客户端 `LocalGame` 用同一 `TableCatalog` 另建 `WinChecker` 交给 `CardAndSkillVerifier`，供响应窗口杠位等二次校验；判定器无共享可变状态，多处复用互不影响。
 - 判定的结算后果（自摸/七对番数、杠上开花）不归本页，见 [scoring.md](scoring.md) §3 与 §2。
+
+## 6. 抢杠候选判定
+
+- 抢杠候选的判定输入是「该座位手牌 + 第 4 张」：13 张手牌加上补杠要加进已有碰的那张牌，按 14 张手牌送入判定器，副露沿用该座位的 `Melds`。
+- 常规胡按 `IWinChecker.IsWin(手牌 + 第 4 张, 副露, 鬼牌)` 判定，七对按 `IWinChecker.IsSevenPairs(手牌 + 第 4 张, 鬼牌)` 判定；两条判定共用这 14 张输入，第 4 张按已入手的第 14 张计、不单独计张。
+- 判定只读：候选阶段不移动牌、不改手牌与副露，第 4 张的物理 id 与所属碰都不变；把第 4 张移入赢家手牌属结算，见 [scoring.md](scoring.md) §2 与 [T-3 §2](../milestones/M0.3/T-3-抢杠与承包.md#2-抢杠结算)。
+- 抢杠胡不算自摸，候选判定不经 `SkillId.SelfDrawn`/`SkillId.SelfDrawnWith7Pairs`，赢家笔不置 `SelfDrawn`/`NoJoker`；位语义见 [scoring.md](scoring.md) §2。
+- 候选来源只限 `MeldKind.KongSupplement`，第 4 张取补杠方案实际会加进碰的那张牌；候选顺序（座位升序）、窗口与超时归会话与请求层，见 [T-3 §1](../milestones/M0.3/T-3-抢杠与承包.md#1-抢杠窗口)。

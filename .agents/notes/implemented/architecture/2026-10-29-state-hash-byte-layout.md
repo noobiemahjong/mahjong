@@ -9,13 +9,15 @@ Status: implemented — `StateHash.Compute` 把 `GameState` 的模型字段按�
 ## Decision
 
 1. 入口是 `Mahjong.Core.Flow.StateHash.Compute(GameState)`：按布局量出精确字节数，一次性分配并写入，取 `SHA256.HashData` 后转小写 hex；不写尾随填充、不加分隔符。
-2. 所有整数小端；长度前缀 `u16`；布局版本写在首字节，为 2。
-3. 字段顺序固定：版本 → 牌墙（张数 + 槽位序 id）→ 玩家数 → 四家（座位、庄家、分数、手牌、副露、弃牌）→ 当前座位 → 局号。
+2. 所有整数小端；长度前缀 `u16`；布局版本写在首字节，为 3（v3 在牌墙后追加公共揭示区段，见 [布局 v3 Note](2026-11-03-state-hash-layout-v3-revealed.md)）。
+3. 字段顺序固定（以下为 v2 顺序；v3 在牌墙后插入揭示区段，见 [布局 v3 Note](2026-11-03-state-hash-layout-v3-revealed.md)）：版本 → 牌墙（张数 + 槽位序 id）→ 玩家数 → 四家（座位、庄家、分数、手牌、副露、弃牌）→ 当前座位 → 局号。
 4. 分数是 `short`，提升为 `int` 后写 4 字节小端补码；副露每副 4 字节头（种类、亮明、目标座位、张数）+ 张数 × `u16` 牌 id，无目标座位写 255。
 5. 只编码模型字段：不含时钟、Session、日志、内容清单哈希与规则版本；动作树与请求状态不参与。
 6. 牌 id 取 `Tile.Id`（物理牌 1–136）；区域按槽位顺序编码、不排序，zone 的插入顺序因此是哈希事实。
 
 实现见 [StateHash](../../../../src/Mahjong.Core/Flow/StateHash.cs)。
+
+当前布局的段位、字节长与两条金标见 [布局 v3 Note](2026-11-03-state-hash-layout-v3-revealed.md)。
 
 ## Alternatives considered
 

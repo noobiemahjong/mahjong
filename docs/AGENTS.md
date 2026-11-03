@@ -22,7 +22,7 @@
 | [.agents/notes/](../.agents/notes/README.md) | 决策的 why、放弃的方案、必须的验证 | 操作教程、当前接口清单 |
 | [legacy/](legacy/README.md) | 旧 Unity 历史资料 | 作为设计依据或验收基线 |
 
-**放置判据**：读代码的人要的 → 注释；下一个做决定的人要的 → notes；当前怎么运转 → architecture/subsystems；怎么做 → cookbook；事故 → postmortem；数据/证据 → TABLES/reference。
+**放置判据**：读代码的人要的 → 注释；做决定的人要的 → notes；当前怎么运转 → architecture/subsystems；怎么做 → cookbook；事故 → postmortem；数据/证据 → TABLES/reference。
 
 ## 写作规则
 
@@ -56,18 +56,18 @@
 | 子树 `AGENTS.md` | 4 KB |
 | `docs/AGENTS.md` | 6 KB |
 | `docs/development.md` | 8 KB |
-| `docs/architecture.md` | 8 KB |
+| `docs/architecture.md` | 10 KB |
 | `docs/subsystems/**` | 10 KB |
 | `docs/DESIGN.md` | 64 KB |
 | `docs/TABLES.md` | 16 KB |
 | `docs/legacy/**` | 64 KB |
 | 各级 `README.md` / 模板 / `CLAUDE.md` | 4 KB |
 | 单篇 Note / milestone / postmortem / pitfall | 8 KB / 16 KB / 8 KB / 4 KB |
-| 单篇 task（`M<N>/T-*`）/ reference | 14 KB / 44 KB |
+| 单篇 task（`M<N>/T-*`）/ reference | 14 KB（T-5 16 KB）/ 64 KB |
 | handbook / specs / 实施规格 | 8 KB / 10 KB / 16 KB |
 | 索引行（milestones 等） | ≤300 字符 |
 
-超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同提交改预算并说明理由）。
+超预算按顺序处理：**下沉迁移 → 精简浓缩 → 提额**（提额须同批改预算并写理由）。
 
 ## 门禁（由 [tools/doc-gate](../tools/doc-gate/README.md) 执行）
 

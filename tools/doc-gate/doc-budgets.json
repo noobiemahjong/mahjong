@@ -74,6 +74,10 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/architecture/2026-11-03-state-hash-layout-v3-revealed.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/feature/2026-10-29-client-smoke-arg.md",
       "limitBytes": 8192
     },
@@ -190,6 +194,18 @@
       "limitBytes": 8192
     },
     {
+      "path": ".agents/notes/implemented/process/2026-11-03-architecture-doc-budget-raise.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-11-03-m03-closeout-budget-raise.md",
+      "limitBytes": 8192
+    },
+    {
+      "path": ".agents/notes/implemented/process/2026-11-03-review-session-independence.md",
+      "limitBytes": 8192
+    },
+    {
       "path": ".agents/notes/implemented/testing/2026-10-29-perf-baseline-method.md",
       "limitBytes": 8192
     },
@@ -223,7 +239,7 @@
     },
     {
       "path": "docs/architecture.md",
-      "limitBytes": 8192
+      "limitBytes": 10240
     },
     {
       "path": "docs/cookbook/aot-export.md",
@@ -236,6 +252,10 @@
     {
       "path": "docs/cookbook/play.md",
       "limitBytes": 8192
+    },
+    {
+      "path": "docs/cookbook/rules-variants.md",
+      "limitBytes": 10240
     },
     {
       "path": "docs/cookbook/run.md",
@@ -359,15 +379,15 @@
     },
     {
       "path": "docs/milestones/M0.3/T-3-抢杠与承包.md",
-      "limitBytes": 10240
+      "limitBytes": 14336
     },
     {
       "path": "docs/milestones/M0.3/T-4-中马.md",
-      "limitBytes": 10240
+      "limitBytes": 14336
     },
     {
       "path": "docs/milestones/M0.3/T-5-回归与收口.md",
-      "limitBytes": 10240
+      "limitBytes": 16384
     },
     {
       "path": "docs/milestones/M1-回放与流正式化.md",
@@ -439,7 +459,7 @@
     },
     {
       "path": "docs/reference/mutation-ledger.md",
-      "limitBytes": 45056
+      "limitBytes": 65536
     },
     {
       "path": "docs/specs/discovery.md",

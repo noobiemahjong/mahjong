@@ -20,6 +20,12 @@ public sealed class FlowDeterminismTests
         Assert.Equal(firstHash, secondHash);
         Assert.Equal(firstTrace, secondTrace);
         Assert.Equal(64, firstHash.Length);
+        Assert.Matches("^[0-9a-f]{64}$", firstHash);
+
+        // 轨迹必须真的产出了动作记录，否则「两次都为空」也会相等。
+        Assert.NotEmpty(firstTrace);
+        Assert.Contains("draw:", firstTrace, StringComparison.Ordinal);
+        Assert.Contains("discard:", firstTrace, StringComparison.Ordinal);
     }
 
     [Fact]

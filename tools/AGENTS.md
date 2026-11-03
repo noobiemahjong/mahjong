@@ -11,6 +11,7 @@
 | `table-inspect` | 解码 `content/tables/*.bytes` 为 JSONL（只读） |
 | `aot-smoke` | 客户端 AOT 导出 + 独立 exe 冒烟 |
 | `team-taskbook` | 团队任务书模板（Lead 工作标准、批次契约、单元任务书）；批次型任务用 |
+| `team-taskbook/check-review-sessions.ps1` | 审核会话超期判定（读 DSH 会话投影缓存）：步数 / 平均上下文 / 是否超期（>80 步或 avg >200K）；`-List N` 列最近会话、`-Json` 机读；ASCII 输出 |
 
 ## 规则
 

@@ -23,6 +23,19 @@
 | [templates/lead-brief.md](templates/lead-brief.md) | Lead 工作标准：任务卡、读序、质量底线、纪律、预算、检查点、完成判据、提交粒度 |
 | [templates/batch-contract.md](templates/batch-contract.md) | 批次契约：范围清单、角色与文件所有权、编号、验收 |
 | [templates/cell-brief.md](templates/cell-brief.md) | 单元任务书 + 交接单四段（结论 / 已排除 / 待办 / 风险） |
+| [check-review-sessions.ps1](check-review-sessions.ps1) | 审核会话超期判定：读 DSH 会话缓存，输出步数 / 平均上下文 / EXPIRED；`-List N`、`-Json`；ASCII 输出 |
+
+## 工具
+
+审核会话超期判定（读 DSH 会话投影缓存；ASCII 输出；退出码 0 = 全 OK / 1 = 有超期 / 2 = 用法或 IO 错误）：
+
+````powershell
+pwsh -File tools/team-taskbook/check-review-sessions.ps1 -List 15
+pwsh -File tools/team-taskbook/check-review-sessions.ps1 <session-id 或前缀> -Json
+pwsh -File tools/team-taskbook/check-review-sessions.ps1 -List 5 -Steps 80 -AvgCtxK 200
+````
+
+默认阈值：>80 步或平均上下文 >200K 判 EXPIRED；「同一产物第 4 轮」无法从会话文件推出，按 review 文件头自报核对。
 
 ## 依赖的本仓口径
 

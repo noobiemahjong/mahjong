@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Mahjong.Tests" />
+    <InternalsVisibleTo Include="Mahjong.Session" />
   </ItemGroup>
 
 </Project>

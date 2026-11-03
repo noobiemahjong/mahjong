@@ -5,9 +5,12 @@ using Mahjong.Core.Rules;
 namespace Mahjong.Session;
 
 /// <summary>
-/// 请求登记表：从 1 单调分配请求 id、登记单座请求与弃牌响应窗口、收集应答、在 tick 边界结算并上报请求开闭事件。
+/// 请求登记表：从 1 单调分配请求 id、登记单座请求、弃牌响应窗口与抢杠组、收集应答、在 tick 边界结算并上报请求开闭事件。
 /// 响应窗口按候选顺序占用连续 id，仲裁复用 <see cref="ResponseWindow"/>（杠 &gt; 碰 → arrivalTick 升序 → 座位升序）。
-/// 每个请求只产出一次结果；单座结果与窗口逐请求结果都只可消费一次。实例非线程安全；无静态可变状态。
+/// 抢杠组与二者完全隔离：不复用 <see cref="ResponseWindow"/>、不经过 <see cref="OpenGroup"/>，允许动词为 Win|Pass，
+/// 胜者取关窗后已应答 Win 中座位最小者，其余 Win 记 <see cref="RequestOutcomeKind.Cancelled"/>、未应答记
+/// <see cref="RequestOutcomeKind.TimedOut"/>。
+/// 每个请求只产出一次结果；单座结果与窗口逐请求结果都只可消费一次，抢杠组结果整体只可取一次。实例非线程安全；无静态可变状态。
 /// </summary>
 internal sealed class SessionRequestRegistry : IRequestRegistry
 {
@@ -15,8 +18,10 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
     private readonly ISessionRequestSink _sink;
     private readonly List<SingleRequest> _singles = [];
     private readonly List<ResponseGroup> _groups = [];
+    private readonly List<RobbingKongGroup> _robbingGroups = [];
     private long _nextRequestId = 1;
     private long _nextGroupId = 1;
+    private long _nextRobbingGroupId = 1;
 
     /// <summary>创建登记表。</summary>
     /// <param name="state">权威局面；用于按座位取 <see cref="PlayerState"/> 引用。</param>
@@ -49,6 +54,17 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
                 if (group.Window.IsOpen)
                 {
                     foreach (PendingRequest request in group.Window.Requests)
+                    {
+                        open.Add(request);
+                    }
+                }
+            }
+
+            foreach (RobbingKongGroup group in _robbingGroups)
+            {
+                if (!group.Closed)
+                {
+                    foreach (PendingRequest request in group.Requests)
                     {
                         open.Add(request);
                     }
@@ -134,6 +150,125 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
     }
 
     /// <summary>
+    /// 打开抢杠组：按候选座位升序各开一条 <see cref="RequestKind.RobbingKong"/> 请求（允许 Win|Pass），
+    /// 逐个上报 RequestOpened。候选为空时返回 null 且不分配 groupId/requestId。
+    /// 与 <see cref="OpenGroup"/> 完全隔离：不构造 <see cref="ResponseWindow"/>、不写入弃牌响应窗口状态。
+    /// </summary>
+    /// <param name="fourthTile">被抢的补杠第 4 张，物理 id 必须已知。</param>
+    /// <param name="candidates">可抢杠的玩家，1–3 个，调用方按座位升序传入，顺序即请求 id 顺序。</param>
+    /// <param name="openedTick">开窗 tick。</param>
+    /// <param name="deadlineTick">截止 tick，不得早于 <paramref name="openedTick"/>。</param>
+    /// <returns>抢杠组 id；候选为空时为 null。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> 为 null 或含 null 元素。</exception>
+    /// <exception cref="ArgumentException">候选超过 3 个、座位重复或第 4 张 id 未知。</exception>
+    /// <exception cref="ArgumentOutOfRangeException">截止 tick 早于开窗 tick（防御性校验）。</exception>
+    public long? OpenRobbingKongGroup(
+        Tile fourthTile,
+        IReadOnlyList<PlayerState> candidates,
+        long openedTick,
+        long deadlineTick)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        if (candidates.Count > _state.Players.Length - 1)
+        {
+            throw new ArgumentException(
+                $"At most {_state.Players.Length - 1} seats can rob one kong.",
+                nameof(candidates));
+        }
+
+        if (fourthTile.Id == Tile.UnknownId)
+        {
+            throw new ArgumentException("The robbed kong tile must have a known physical id.", nameof(fourthTile));
+        }
+
+        ValidateDeadline(openedTick, deadlineTick);
+
+        bool[] seats = new bool[_state.Players.Length];
+        PendingRequest[] requests = new PendingRequest[candidates.Count];
+        for (int index = 0; index < candidates.Count; index++)
+        {
+            PlayerState candidate = candidates[index]
+                ?? throw new ArgumentNullException(nameof(candidates), "Candidate players must not be null.");
+            if (seats[candidate.Seat])
+            {
+                throw new ArgumentException(
+                    $"Candidate seat {candidate.Seat} appears more than once.",
+                    nameof(candidates));
+            }
+
+            seats[candidate.Seat] = true;
+            requests[index] = new PendingRequest(
+                _nextRequestId + index,
+                candidate.Seat,
+                RequestKind.RobbingKong,
+                AllowedVerbs.Win | AllowedVerbs.Pass,
+                deadlineTick);
+        }
+
+        long groupId = _nextRobbingGroupId++;
+        _nextRequestId += requests.Length;
+        RobbingKongGroup group = new()
+        {
+            GroupId = groupId,
+            FourthTile = fourthTile,
+            Requests = requests,
+            DeadlineTick = deadlineTick,
+            Commands = new GameCommand?[requests.Length],
+            Answered = new bool[requests.Length],
+        };
+        _robbingGroups.Add(group);
+
+        foreach (PendingRequest request in group.Requests)
+        {
+            _sink.RequestOpened(request);
+        }
+
+        return groupId;
+    }
+
+    /// <summary>抢杠组是否已关闭（全员应答或到达 deadline）。</summary>
+    /// <param name="groupId">抢杠组 id。</param>
+    /// <returns>已关闭返回 true；未知 groupId 返回 false。</returns>
+    public bool IsRobbingKongGroupClosed(long groupId)
+    {
+        RobbingKongGroup? group = FindRobbingGroup(groupId);
+        return group is not null && group.Closed;
+    }
+
+    /// <summary>
+    /// 取抢杠组结算快照；未关窗时抛异常，每个组只可消费一次（与窗口逐请求消费口径不同）。
+    /// </summary>
+    /// <param name="groupId">抢杠组 id。</param>
+    /// <returns>含胜者座位（无胜者为 <see cref="Meld.NoTargetSeat"/>）、逐候选请求与结果的快照。</returns>
+    /// <exception cref="InvalidOperationException">group id 不存在、组尚未关闭或结果已被消费。</exception>
+    public RobbingKongResult TakeRobbingKongResult(long groupId)
+    {
+        RobbingKongGroup? group = FindRobbingGroup(groupId);
+        if (group is null)
+        {
+            throw new InvalidOperationException($"抢杠组 {groupId} 不存在。");
+        }
+
+        if (!group.Closed)
+        {
+            throw new InvalidOperationException($"抢杠组 {groupId} 尚未关闭。");
+        }
+
+        if (group.Consumed)
+        {
+            throw new InvalidOperationException($"抢杠组 {groupId} 的结算结果已被消费。");
+        }
+
+        group.Consumed = true;
+        return group.Result!;
+    }
+
+    /// <summary>
     /// 按座位找开放请求：<paramref name="requestId"/> 为 0 时返回该座位唯一的开放请求；
     /// 非 0 时要求开放请求的 id 与之相等。
     /// </summary>
@@ -168,6 +303,30 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
             }
 
             foreach (PendingRequest candidate in group.Window.Requests)
+            {
+                if (candidate.Seat != seat)
+                {
+                    continue;
+                }
+
+                if (requestId != 0 && candidate.RequestId != requestId)
+                {
+                    continue;
+                }
+
+                request = candidate;
+                return true;
+            }
+        }
+
+        foreach (RobbingKongGroup group in _robbingGroups)
+        {
+            if (group.Closed)
+            {
+                continue;
+            }
+
+            foreach (PendingRequest candidate in group.Requests)
             {
                 if (candidate.Seat != seat)
                 {
@@ -249,6 +408,32 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
             return true;
         }
 
+        RobbingKongGroup? robbing = FindRobbingGroupByRequest(request.RequestId, out int robbingIndex);
+        if (robbing is not null)
+        {
+            if (robbing.Closed)
+            {
+                return false;
+            }
+
+            PendingRequest storedRobbing = robbing.Requests[robbingIndex];
+            if (storedRobbing.Seat != request.Seat || storedRobbing.Kind != request.Kind)
+            {
+                return false;
+            }
+
+            if (robbing.Answered[robbingIndex]
+                || arrivalTick > storedRobbing.DeadlineTick
+                || !Allows(storedRobbing.Allowed, command.Verb))
+            {
+                return false;
+            }
+
+            robbing.Answered[robbingIndex] = true;
+            robbing.Commands[robbingIndex] = command;
+            return true;
+        }
+
         ResponseGroup? group = FindGroupByRequest(request.RequestId, out int candidateIndex);
         if (group is null || group.Closed)
         {
@@ -285,6 +470,12 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
         if (single is not null)
         {
             return single.Settled;
+        }
+
+        RobbingKongGroup? robbing = FindRobbingGroupByRequest(requestId, out _);
+        if (robbing is not null)
+        {
+            return robbing.Closed;
         }
 
         ResponseGroup? group = FindGroupByRequest(requestId, out _);
@@ -348,7 +539,8 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
 
     /// <summary>
     /// 推进到指定 tick：先按 requestId 升序结算单座请求（已应答 → Answered；到 deadline → TimedOut），
-    /// 再关闭全体已应答或到 deadline 的响应窗口，按候选顺序逐座上报 RequestClosed。每个请求只产出一次结果。
+    /// 再关闭全体已应答或到 deadline 的响应窗口，最后关闭抢杠组；均按候选顺序逐座上报 RequestClosed。
+    /// 抢杠组关窗时先定胜者（已应答 Win 中座位最小者），再逐座写结果。每个请求只产出一次结果。
     /// </summary>
     /// <param name="tick">当前逻辑 tick。</param>
     void IRequestRegistry.BeginTick(long tick)
@@ -399,6 +591,90 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
                 _sink.RequestClosed(result.Requests[index], outcome.Kind, answer);
             }
         }
+
+        foreach (RobbingKongGroup group in _robbingGroups)
+        {
+            if (group.Closed)
+            {
+                continue;
+            }
+
+            if (!IsRobbingKongAllAnswered(group) && tick < group.DeadlineTick)
+            {
+                continue;
+            }
+
+            CloseRobbingKongGroup(group);
+        }
+    }
+
+    /// <summary>抢杠组是否全员已应答（Win 与 Pass 都算应答）。</summary>
+    private static bool IsRobbingKongAllAnswered(RobbingKongGroup group)
+    {
+        for (int index = 0; index < group.Answered.Length; index++)
+        {
+            if (!group.Answered[index])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 关闭抢杠组：胜者 = 已应答 Win 中座位最小者（候选按座位升序登记，取首个即最小）；
+    /// 其余 Win 记 Cancelled、显式 Pass 记 Answered（携带过命令）、未应答记 TimedOut。
+    /// </summary>
+    private void CloseRobbingKongGroup(RobbingKongGroup group)
+    {
+        int winnerIndex = -1;
+        for (int index = 0; index < group.Commands.Length; index++)
+        {
+            GameCommand? answer = group.Commands[index];
+            if (answer is not null && answer.Value.Verb == CommandVerb.Win)
+            {
+                winnerIndex = index;
+                break;
+            }
+        }
+
+        RequestOutcome[] outcomes = new RequestOutcome[group.Requests.Length];
+        for (int index = 0; index < outcomes.Length; index++)
+        {
+            PendingRequest request = group.Requests[index];
+            GameCommand? answer = group.Commands[index];
+            if (answer is null)
+            {
+                outcomes[index] = new RequestOutcome(request.RequestId, RequestOutcomeKind.TimedOut, null);
+            }
+            else if (answer.Value.Verb == CommandVerb.Win)
+            {
+                outcomes[index] = index == winnerIndex
+                    ? new RequestOutcome(request.RequestId, RequestOutcomeKind.Answered, answer)
+                    : new RequestOutcome(request.RequestId, RequestOutcomeKind.Cancelled, null);
+            }
+            else
+            {
+                outcomes[index] = new RequestOutcome(request.RequestId, RequestOutcomeKind.Answered, answer);
+            }
+        }
+
+        byte winnerSeat = winnerIndex >= 0 ? group.Requests[winnerIndex].Seat : Meld.NoTargetSeat;
+        group.Result = new RobbingKongResult(
+            group.FourthTile,
+            winnerSeat,
+            Array.AsReadOnly(group.Requests),
+            Array.AsReadOnly(outcomes));
+        group.Outcomes = outcomes;
+        group.Closed = true;
+
+        for (int index = 0; index < outcomes.Length; index++)
+        {
+            RequestOutcome outcome = outcomes[index];
+            GameCommand? answer = outcome.Kind == RequestOutcomeKind.Answered ? group.Commands[index] : null;
+            _sink.RequestClosed(group.Requests[index], outcome.Kind, answer);
+        }
     }
 
     /// <summary>
@@ -432,6 +708,39 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
         group.Consumed[candidateIndex] = true;
         outcome = group.Outcomes[candidateIndex];
         return true;
+    }
+
+    /// <summary>按 id 找抢杠组；未知返回 null（已关闭的组也返回，供取结果与判定）。</summary>
+    private RobbingKongGroup? FindRobbingGroup(long groupId)
+    {
+        foreach (RobbingKongGroup group in _robbingGroups)
+        {
+            if (group.GroupId == groupId)
+            {
+                return group;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>按请求 id 找抢杠组与候选下标；不是抢杠请求时 candidateIndex 为 -1。</summary>
+    private RobbingKongGroup? FindRobbingGroupByRequest(long requestId, out int candidateIndex)
+    {
+        foreach (RobbingKongGroup group in _robbingGroups)
+        {
+            for (int index = 0; index < group.Requests.Length; index++)
+            {
+                if (group.Requests[index].RequestId == requestId)
+                {
+                    candidateIndex = index;
+                    return group;
+                }
+            }
+        }
+
+        candidateIndex = -1;
+        return null;
     }
 
     private void SettleSingle(SingleRequest single, RequestOutcomeKind kind, GameCommand? answer)
@@ -530,6 +839,24 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
         public bool Consumed;
     }
 
+    /// <summary>
+    /// 抢杠组的登记与结算状态：候选按座位升序，逐请求一条 <see cref="RequestKind.RobbingKong"/>；
+    /// 结果整体只可消费一次。
+    /// </summary>
+    private sealed class RobbingKongGroup
+    {
+        public long GroupId;
+        public Tile FourthTile;
+        public PendingRequest[] Requests = [];
+        public GameCommand?[] Commands = [];
+        public bool[] Answered = [];
+        public long DeadlineTick;
+        public bool Closed;
+        public bool Consumed;
+        public RequestOutcome[] Outcomes = [];
+        public RobbingKongResult? Result;
+    }
+
     /// <summary>响应窗口的登记与结算状态。</summary>
     private sealed class ResponseGroup
     {
@@ -542,4 +869,42 @@ internal sealed class SessionRequestRegistry : IRequestRegistry
         public ResponseResult? Result;
         public RequestOutcome[] Outcomes = [];
     }
+}
+
+/// <summary>
+/// 抢杠组结算快照：被抢的第 4 张、胜者座位与逐候选结果。由 <see cref="SessionRequestRegistry.TakeRobbingKongResult"/> 一次性取出，实例只读。
+/// 无胜者时 <see cref="WinnerSeat"/> 为 <see cref="Meld.NoTargetSeat"/>。
+/// </summary>
+internal sealed class RobbingKongResult
+{
+    internal RobbingKongResult(
+        Tile fourthTile,
+        byte winnerSeat,
+        IReadOnlyList<PendingRequest> requests,
+        IReadOnlyList<RequestOutcome> outcomes)
+    {
+        FourthTile = fourthTile;
+        WinnerSeat = winnerSeat;
+        Requests = requests;
+        Outcomes = outcomes;
+    }
+
+    /// <summary>是否有胜者；全员过或全员超时为 false。</summary>
+    public bool HasWinner => WinnerSeat != Meld.NoTargetSeat;
+
+    /// <summary>抢杠赢家座位 0–3；无胜者为 <see cref="Meld.NoTargetSeat"/>。</summary>
+    public byte WinnerSeat { get; }
+
+    /// <summary>被抢的补杠第 4 张（物理牌，id 不变）。</summary>
+    public Tile FourthTile { get; }
+
+    /// <summary>本组的请求快照，顺序等于开窗时的候选座位升序。</summary>
+    public IReadOnlyList<PendingRequest> Requests { get; }
+
+    /// <summary>
+    /// 逐候选结果，顺序等于 <see cref="Requests"/>：胜者 Answered 且 Payload 为 boxed <see cref="GameCommand"/>（Win）；
+    /// 落败 Win 记 Cancelled 且 Payload 为 null；显式 Pass 记 Answered 且 Payload 为 boxed <see cref="GameCommand"/>；
+    /// 未应答记 TimedOut 且 Payload 为 null。
+    /// </summary>
+    public IReadOnlyList<RequestOutcome> Outcomes { get; }
 }

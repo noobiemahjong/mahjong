@@ -91,3 +91,11 @@ public readonly record struct GameEndedPayload(int[] TotalScores, byte[] Ranking
 /// <param name="Seat">座位 0–3。</param>
 /// <param name="State">状态编码：0 Online、1 Grace、2 Bot、3 Offline。</param>
 public readonly record struct SeatStateChangedPayload(byte Seat, byte State);
+
+/// <summary>
+/// 翻马的 payload：马牌座位与物理牌 id。公开事件，四座与观战者同一载荷，
+/// <see cref="TileId"/> 直出 1–136（不像摸牌那样按 viewer 置 -1）。
+/// </summary>
+/// <param name="HorseSeat">马牌座位 0–3，口径为 <c>tile.Id % 4</c>。</param>
+/// <param name="TileId">马牌的物理牌 id 1–136。</param>
+public readonly record struct HorseRevealedPayload(byte HorseSeat, ushort TileId);

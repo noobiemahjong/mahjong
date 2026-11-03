@@ -31,6 +31,7 @@ public sealed class PayloadReaderTests
         buffer.EmitRoundEnded(19, 2, new short[] { 10, -5, -3, -2 }, ScoreActionType.SelfDrawn);
         buffer.EmitGameEnded(20, new short[] { 100, -20, -30, -50 }, new byte[] { 0, 1, 2, 3 }, "replay");
         buffer.EmitSeatStateChanged(21, 0, 2);
+        buffer.EmitHorseRevealed(22, 3, 71);
 
         IReadOnlyList<SessionEvent> events = buffer.Drain(255);
 
@@ -89,6 +90,9 @@ public sealed class PayloadReaderTests
 
         SeatStateChangedPayload seatStateChanged = SessionEventPayloadReader.ReadSeatStateChanged(events[11]);
         Assert.Equal(new SeatStateChangedPayload(0, 2), seatStateChanged);
+
+        HorseRevealedPayload horseRevealed = SessionEventPayloadReader.ReadHorseRevealed(events[12]);
+        Assert.Equal(new HorseRevealedPayload(3, 71), horseRevealed);
     }
 
     [Fact]
@@ -121,6 +125,7 @@ public sealed class PayloadReaderTests
             () => SessionEventPayloadReader.ReadRequestClosed(sessionEvent),
             () => SessionEventPayloadReader.ReadRoundEnded(sessionEvent),
             () => SessionEventPayloadReader.ReadGameEnded(sessionEvent),
+            () => SessionEventPayloadReader.ReadHorseRevealed(sessionEvent),
         ];
 
         foreach (Action read in readers)
@@ -178,6 +183,8 @@ public sealed class PayloadReaderTests
         { SessionEventKind.GameEnded, GameEndedWithRanking(4) },
         { SessionEventKind.GameEnded, GameEndedWithInvalidUtf8() },
         { SessionEventKind.SeatStateChanged, new byte[] { 0 } },
+        { SessionEventKind.HorseRevealed, new byte[] { 2, 21 } },
+        { SessionEventKind.HorseRevealed, new byte[] { 2, 21, 0, 0 } },
     };
 
     [Fact]
@@ -211,6 +218,7 @@ public sealed class PayloadReaderTests
         SessionEventKind.RoundEnded => SessionEventPayloadReader.ReadRoundEnded(sessionEvent),
         SessionEventKind.GameEnded => SessionEventPayloadReader.ReadGameEnded(sessionEvent),
         SessionEventKind.SeatStateChanged => SessionEventPayloadReader.ReadSeatStateChanged(sessionEvent),
+        SessionEventKind.HorseRevealed => SessionEventPayloadReader.ReadHorseRevealed(sessionEvent),
         _ => throw new InvalidOperationException(),
     };
 

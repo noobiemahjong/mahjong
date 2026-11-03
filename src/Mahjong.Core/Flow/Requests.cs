@@ -55,6 +55,12 @@ public enum RequestKind : byte
 
     /// <summary>征询过。</summary>
     Pass = 4,
+
+    /// <summary>
+    /// 抢杠：他人补杠的第 4 张可被抢胡时，向其余三座逐个征询。允许动词恒为
+    /// <see cref="AllowedVerbs.Win"/> | <see cref="AllowedVerbs.Pass"/>；胜者取关窗后已应答 Win 中座位最小者。
+    /// </summary>
+    RobbingKong = 5,
 }
 
 /// <summary>待结算请求：向一个座位征询一组动词，带截止 tick。</summary>

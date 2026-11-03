@@ -108,11 +108,11 @@ public static class RulesTestData
         return builder.ToString();
     }
 
-    /// <summary>该局面上所有区域的物理牌总数（牌墙 + 手牌 + 弃牌 + 副露）。</summary>
+    /// <summary>该局面上所有区域的物理牌总数（牌墙 + 公共揭示区 + 手牌 + 弃牌 + 副露）。</summary>
     public static int TotalTileCount(GameState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        int total = state.Wall.Count;
+        int total = state.Wall.Count + state.Revealed.Count;
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {
             PlayerState player = state.Players[seat];

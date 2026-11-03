@@ -4,6 +4,7 @@ using Mahjong.Core.Flow;
 using Mahjong.Core.Rules;
 using Mahjong.Session;
 using Mahjong.Tests.Content.Tables;
+using Mahjong.Tests.Rules;
 using Mahjong.Tests.Session.Support;
 using Mahjong.Tests.Support;
 using Xunit;
@@ -252,8 +253,8 @@ public sealed class GameSessionRoundSettlementTests
                 RoundEndedPayload round = SessionEventPayloadReader.ReadRoundEnded(sessionEvent);
                 RoundStartedPayload started = RoundStartBefore(driver.Events, eventCursor);
                 List<MeldPayload> kongs = KongsInRound(driver.Events, eventCursor);
-                int[] expected = ExpectedDelta(round, started, kongs, variants);
-                Assert.Equal(expected, round.ScoreDelta);
+                IReadOnlyList<int[]> expected = ExpectedDelta(round, started, kongs, variants, driver.Events, eventCursor);
+                AssertDeltaMatches(round.ScoreDelta, expected);
                 Assert.Equal(0, round.ScoreDelta.Sum());
 
                 for (byte seat = 0; seat < GameState.PlayerCount; seat++)
@@ -386,17 +387,21 @@ public sealed class GameSessionRoundSettlementTests
 
         Assert.NotEqual(-1, round.WinnerSeat);
         Assert.True((round.ActionType & ScoreActionType.SelfDrawn) != 0);
-        Assert.Equal(
+        AssertDeltaMatches(
+            round.ScoreDelta,
             ExpectedDelta(
                 round,
                 RoundStartBefore(driver.Events, index),
                 KongsInRound(driver.Events, index),
-                SessionTestSupport.Content.Variants),
-            round.ScoreDelta);
+                SessionTestSupport.Content.Variants,
+                driver.Events,
+                index));
 
         // 七对金额：per = (有鬼 ? 2 : 4) × 2；赢家 +3per、其余 -per，叠加本局已发生的杠分。
-        bool hasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
-        int per = (hasJoker ? 2 : 4) * 2;
+        // 七对自摸入口（ApplySevenPairsSelfDrawn）按契约置/清 NoJoker 位，故该位即手牌事实；
+        // 每份金额统一走 IntegrationSupport.PerShare，不在这里另立一套公式。
+        bool winnerHasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
+        int per = IntegrationSupport.PerShare(winnerHasJoker, sevenPairs: true);
         int kongDeltaWinner = round.ScoreDelta[round.WinnerSeat] - (3 * per);
         Assert.True(kongDeltaWinner >= 0);
     }
@@ -404,7 +409,7 @@ public sealed class GameSessionRoundSettlementTests
     [Fact]
     public void KongUpFlower_IsSetOnlyWhenWinnersLastDrawWasReplacement()
     {
-        // seed 7 第 1 局：0 号明杠后补牌自摸 → 置 KongUpFlower，且杠分与开花倍数同时成立。
+        // seed 7 第 7 局：0 号明杠后补牌自摸 → 置 KongUpFlower，且杠分与开花倍数同时成立。
         GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed: 7);
         session.Start();
         SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
@@ -419,13 +424,15 @@ public sealed class GameSessionRoundSettlementTests
         (RoundEndedPayload Payload, int Index) up = roundEnded.First(pair =>
             (pair.Payload.ActionType & ScoreActionType.KongUpFlower) != 0);
         Assert.NotEqual(-1, up.Payload.WinnerSeat);
-        Assert.Equal(
+        AssertDeltaMatches(
+            up.Payload.ScoreDelta,
             ExpectedDelta(
                 up.Payload,
                 RoundStartBefore(driver.Events, up.Index),
                 KongsInRound(driver.Events, up.Index),
-                SessionTestSupport.Content.Variants),
-            up.Payload.ScoreDelta);
+                SessionTestSupport.Content.Variants,
+                driver.Events,
+                up.Index));
 
         // 赢家本回合最后一摸是杠后补牌：该 Drew 紧跟在赢家的杠 Meld 之后且同 tick。
         int lastDrewIndex = -1;
@@ -678,11 +685,129 @@ public sealed class GameSessionRoundSettlementTests
 
             RoundEndedPayload round = SessionEventPayloadReader.ReadRoundEnded(sessionEvent);
             Assert.Equal(0, (int)(round.ActionType & VariantBits));
-            Assert.Equal(
-                ExpectedDelta(round, RoundStartBefore(driver.Events, index), KongsInRound(driver.Events, index), disabled),
-                round.ScoreDelta);
+            AssertDeltaMatches(
+                round.ScoreDelta,
+                ExpectedDelta(
+                    round,
+                    RoundStartBefore(driver.Events, index),
+                    KongsInRound(driver.Events, index),
+                    disabled,
+                    driver.Events,
+                    index));
             Assert.Equal(0, round.ScoreDelta.Sum());
         }
+    }
+
+    [Fact]
+    public void TryRevealHorse_EmptyWall_ReturnsFalseAndLeavesEveryZoneUntouched()
+    {
+        var state = new GameState();
+        string before = StateHash.Compute(state);
+
+        Assert.False(state.TryRevealHorse(out Tile none));
+        Assert.Equal(default, none);
+        Assert.Equal(0, state.Revealed.Count);
+        Assert.Equal(0, state.Wall.Count);
+        Assert.Equal(before, StateHash.Compute(state));
+
+        // 有牌时从墙头取一张进揭示区：物理 id 不变、墙数 −1、区域 id 为公共揭示区。
+        state.Wall.Append(RulesTestData.FromId(5));
+        string withWall = StateHash.Compute(state);
+        Assert.True(state.TryRevealHorse(out Tile revealed));
+        Assert.Equal(5, revealed.Id);
+        Assert.Equal(0, state.Wall.Count);
+        Assert.Equal(1, state.Revealed.Count);
+        Assert.Equal(5, state.Revealed[0].Id);
+        Assert.Equal(new ZoneId(ZoneId.PublicSeat, ZoneKind.Revealed), state.Revealed.Id);
+        Assert.NotEqual(withWall, StateHash.Compute(state));
+    }
+
+    [Fact]
+    public void HorseRevealed_PrecedesRoundEndedInSameTick_AndMirrorsHorseWinnerBit()
+    {
+        ContentVariants variants = SessionTestSupport.Content.Variants;
+        Assert.True(variants.HorseBonus > 0);
+
+        int hits = 0;
+        int misses = 0;
+        int revealedRounds = 0;
+        foreach (ulong seed in new ulong[] { 7, 20, 1, 77 })
+        {
+            GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed);
+            session.Start();
+            SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+            Assert.True(driver.RunToGameOver());
+
+            for (int index = 0; index < driver.Events.Count; index++)
+            {
+                if (driver.Events[index].Kind != SessionEventKind.HorseRevealed)
+                {
+                    continue;
+                }
+
+                revealedRounds++;
+                HorseRevealedPayload horse = SessionEventPayloadReader.ReadHorseRevealed(driver.Events[index]);
+
+                // 顺序：HorseRevealed 紧邻 RoundEnded 之前、同 tick（RequestClosed < HorseRevealed < RoundEnded）。
+                Assert.True(index + 1 < driver.Events.Count);
+                SessionEvent next = driver.Events[index + 1];
+                Assert.Equal(SessionEventKind.RoundEnded, next.Kind);
+                Assert.Equal(driver.Events[index].Tick, next.Tick);
+
+                // 载荷：物理牌 1–136，马座位 = 物理 id % 4；位与命中一致（一位规则，未命中不置位）。
+                Assert.InRange(horse.TileId, (ushort)1, (ushort)136);
+                Assert.Equal((byte)(horse.TileId % GameState.PlayerCount), horse.HorseSeat);
+                RoundEndedPayload round = SessionEventPayloadReader.ReadRoundEnded(next);
+                bool hit = horse.HorseSeat == round.WinnerSeat;
+                Assert.Equal(hit, (round.ActionType & ScoreActionType.HorseWinner) != 0);
+                if (hit)
+                {
+                    hits++;
+                }
+                else
+                {
+                    misses++;
+                }
+            }
+        }
+
+        // 样本必须同时覆盖命中与不命中，否则上面的位断言没有实际对照。
+        Assert.True(revealedRounds > 0);
+        Assert.True(hits > 0);
+        Assert.True(misses > 0);
+    }
+
+    [Fact]
+    public void SameSeed_Twice_ProducesSameHorseSequenceDeltasAndFinalStateHash()
+    {
+        (string firstHorse, string firstDeltas, string firstHash) = RunSeed(seed: 7);
+        (string secondHorse, string secondDeltas, string secondHash) = RunSeed(seed: 7);
+
+        Assert.NotEmpty(firstHorse);
+        Assert.Equal(firstHorse, secondHorse);
+        Assert.Equal(firstDeltas, secondDeltas);
+        Assert.Equal(firstHash, secondHash);
+    }
+
+    /// <summary>跑完一整场并把翻马序列、逐局 delta 与终态哈希文本化，用于同 seed 两次比对。</summary>
+    private (string Horse, string Deltas, string Hash) RunSeed(ulong seed)
+    {
+        GameSession session = SessionTestSupport.CreateFourBots(_fixture.Catalog, seed);
+        session.Start();
+        SessionDriver driver = SessionTestSupport.CreateDriver(session, _fixture.Catalog);
+        Assert.True(driver.RunToGameOver());
+
+        string horse = string.Join(
+            ';',
+            driver.Events
+                .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.HorseRevealed)
+                .Select(sessionEvent => $"{sessionEvent.Tick}:{Convert.ToHexString(sessionEvent.Payload.Span)}"));
+        string deltas = string.Join(
+            ';',
+            driver.Events
+                .Where(sessionEvent => sessionEvent.Kind == SessionEventKind.RoundEnded)
+                .Select(sessionEvent => string.Join(',', SessionEventPayloadReader.ReadRoundEnded(sessionEvent).ScoreDelta)));
+        return (horse, deltas, SessionTestSupport.Hash(session));
     }
 
     /// <summary>取本局（上一个 RoundStarted 之后到 <paramref name="roundEndedIndex"/>）的杠事件。</summary>
@@ -737,20 +862,162 @@ public sealed class GameSessionRoundSettlementTests
     }
 
     /// <summary>
-    /// 按契约口径从结算 payload、本局 RoundStarted 与事件重算本局四座 delta：
-    /// 杠分 + 自摸/七对 + 跟庄（赢家 ≠ 庄且变体开启）+ 连庄奖励（赢家 = 庄且表值大于 0）。
-    /// 变体金额取自内容目录，与结算实现同源；关闭时两项都不加。
+    /// 承包 payer（按优先级取第一个命中的位，与结算单链同序）：抢杠 → 杠上开花承包 → 12 张承包。
+    /// 抢杠不产 Meld 事件（补杠被取消），payer 取「自己回合出牌请求被 Kong 应答」的座位；
+    /// 杠上开花承包取赢家最后一条明杠的供牌者；12 张承包取赢家第 4 副露的供牌者
+    /// （补杠形态的事件不带目标座位，退回它升级的那副同牌种碰的供牌者）。无承包位返回 false。
     /// </summary>
-    private static int[] ExpectedDelta(
+    private static bool TryGetContractPayer(
+        RoundEndedPayload round,
+        IReadOnlyList<MeldPayload> kongs,
+        IReadOnlyList<SessionEvent> events,
+        int roundEndedIndex,
+        out byte payer)
+    {
+        payer = Meld.NoTargetSeat;
+        if (round.WinnerSeat < 0)
+        {
+            return false;
+        }
+
+        const ScoreActionType RobbingBits =
+            ScoreActionType.RobbingTheKong | ScoreActionType.RobbingTheKongPayForEveryone;
+        if ((round.ActionType & RobbingBits) != 0)
+        {
+            for (int index = roundEndedIndex - 1; index >= 0 && events[index].Kind != SessionEventKind.RoundStarted; index--)
+            {
+                if (events[index].Kind != SessionEventKind.RequestClosed)
+                {
+                    continue;
+                }
+
+                RequestClosedPayload closed = SessionEventPayloadReader.ReadRequestClosed(events[index]);
+                if (closed.Outcome != RequestOutcomeKind.Answered || closed.Answer?.Verb != CommandVerb.Kong)
+                {
+                    continue;
+                }
+
+                for (int opened = index - 1; opened >= 0; opened--)
+                {
+                    if (events[opened].Kind != SessionEventKind.RequestOpened)
+                    {
+                        continue;
+                    }
+
+                    RequestOpenedPayload request = SessionEventPayloadReader.ReadRequestOpened(events[opened]);
+                    if (request.RequestId != closed.RequestId || request.Kind != RequestKind.Discard)
+                    {
+                        continue;
+                    }
+
+                    payer = request.Seat;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if ((round.ActionType & ScoreActionType.KongUpFlowerPayForEveryone) != 0)
+        {
+            for (int index = kongs.Count - 1; index >= 0; index--)
+            {
+                MeldPayload meld = kongs[index];
+                if (meld.Seat == round.WinnerSeat
+                    && meld.Kind == MeldKind.KongExposed
+                    && meld.TargetSeat < GameState.PlayerCount)
+                {
+                    payer = meld.TargetSeat;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if ((round.ActionType & ScoreActionType.TwelveCardsConceded) != 0)
+        {
+            List<MeldPayload> winnerMelds = [];
+            for (int index = 0; index < roundEndedIndex; index++)
+            {
+                if (events[index].Kind != SessionEventKind.Meld)
+                {
+                    continue;
+                }
+
+                MeldPayload meld = SessionEventPayloadReader.ReadMeld(events[index]);
+                if (meld.Seat == round.WinnerSeat)
+                {
+                    winnerMelds.Add(meld);
+                }
+            }
+
+            if (winnerMelds.Count != GameState.PlayerCount)
+            {
+                return false;
+            }
+
+            MeldPayload fourth = winnerMelds[GameState.PlayerCount - 1];
+            if (fourth.TargetSeat < GameState.PlayerCount)
+            {
+                payer = fourth.TargetSeat;
+                return true;
+            }
+
+            if (fourth.Kind != MeldKind.KongSupplement || fourth.TileIds.Length == 0)
+            {
+                return false;
+            }
+
+            ushort kongType = (ushort)((fourth.TileIds[0] - 1) / 4);
+            for (int index = 0; index < winnerMelds.Count - 1; index++)
+            {
+                MeldPayload pong = winnerMelds[index];
+                if (pong.Kind != MeldKind.Pong
+                    || pong.TileIds.Length == 0
+                    || (ushort)((pong.TileIds[0] - 1) / 4) != kongType
+                    || pong.TargetSeat >= GameState.PlayerCount)
+                {
+                    continue;
+                }
+
+                payer = pong.TargetSeat;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 按契约口径从结算 payload、本局 RoundStarted 与事件重算本局四座 delta：
+    /// 杠分 + 自摸/七对 + 承包重定向（抢杠 / 杠上开花承包 / 12 张承包）+ 跟庄（赢家 ≠ 庄且变体开启）
+    /// + 连庄奖励（赢家 = 庄且表值大于 0）+ 中马（变体开启、本局有 HorseRevealed 且马座位 = 赢家）。
+    /// 变体金额取自内容目录，与结算实现同源；关闭时各项都不加。
+    /// 返回候选列表：自摸/七对/12 张/杠上开花承包四支按 <see cref="ScoreActionType.NoJoker"/> 位取有无鬼（记账入口
+    /// 按契约置/清该位）只返回一个候选；抢杠胡不置该位，<paramref name="winnerHasJoker"/> 未显式给值时不反推，
+    /// 而是返回「无鬼 4」与「有鬼 2」（七对再 ×2）两个合法基分各一个候选，要求恰好一个与实测相等。
+    /// </summary>
+    /// <param name="round">本局结算 payload。</param>
+    /// <param name="started">本局开场的 RoundStarted payload。</param>
+    /// <param name="kongs">本局杠事件的 payload 序列。</param>
+    /// <param name="variants">内容目录的规则变体。</param>
+    /// <param name="events">整场事件流。</param>
+    /// <param name="roundEndedIndex"><paramref name="round"/> 在 <paramref name="events"/> 中的下标。</param>
+    /// <param name="winnerHasJoker">赢家手牌有无鬼牌；显式给值时优先使用，抢杠支据此锁定唯一基分。</param>
+    private static IReadOnlyList<int[]> ExpectedDelta(
         RoundEndedPayload round,
         RoundStartedPayload started,
         IReadOnlyList<MeldPayload> kongs,
-        ContentVariants variants)
+        ContentVariants variants,
+        IReadOnlyList<SessionEvent> events,
+        int roundEndedIndex,
+        bool? winnerHasJoker = null)
     {
-        int[] delta = new int[GameState.PlayerCount];
+        int[] kongDelta = new int[GameState.PlayerCount];
         if (round.WinnerSeat < 0)
         {
-            return delta;
+            return [kongDelta];
         }
 
         foreach (MeldPayload kong in kongs)
@@ -758,57 +1025,155 @@ public sealed class GameSessionRoundSettlementTests
             switch (kong.Kind)
             {
                 case MeldKind.KongExposed:
-                    delta[kong.Seat] += 3;
-                    delta[kong.TargetSeat] -= 3;
+                    kongDelta[kong.Seat] += 3;
+                    kongDelta[kong.TargetSeat] -= 3;
                     break;
                 case MeldKind.KongConcealed:
                     for (byte seat = 0; seat < GameState.PlayerCount; seat++)
                     {
-                        delta[seat] = seat == kong.Seat ? delta[seat] + 6 : delta[seat] - 2;
+                        kongDelta[seat] = seat == kong.Seat ? kongDelta[seat] + 6 : kongDelta[seat] - 2;
                     }
 
                     break;
                 case MeldKind.KongSupplement:
                     for (byte seat = 0; seat < GameState.PlayerCount; seat++)
                     {
-                        delta[seat] = seat == kong.Seat ? delta[seat] + 3 : delta[seat] - 1;
+                        kongDelta[seat] = seat == kong.Seat ? kongDelta[seat] + 3 : kongDelta[seat] - 1;
                     }
 
                     break;
             }
         }
 
-        bool hasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
         bool sevenPairs = (round.ActionType & ScoreActionType.SevenPairs) != 0;
         bool kongUpFlower = (round.ActionType & ScoreActionType.KongUpFlower) != 0;
-        int per = sevenPairs
-            ? (hasJoker ? 2 : 4) * 2
-            : (hasJoker ? 2 : 4) * (kongUpFlower ? 2 : 1);
-        for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+        bool hasContract = TryGetContractPayer(round, kongs, events, roundEndedIndex, out byte contractPayer);
+
+        var candidates = new List<int[]>();
+        foreach (int per in CandidateShares(round, sevenPairs, kongUpFlower, winnerHasJoker))
         {
-            delta[seat] = seat == round.WinnerSeat
-                ? delta[seat] + (3 * per)
-                : delta[seat] - per;
+            int[] delta = (int[])kongDelta.Clone();
+            for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+            {
+                delta[seat] = seat == round.WinnerSeat
+                    ? delta[seat] + (3 * per)
+                    : delta[seat] - per;
+            }
+
+            // 承包重定向（按位判定，一次胡牌只取一个承包者）：抢杠 / 杠上开花承包 / 12 张承包都由一个 payer 付满 3 份。
+            // 与普通自摸的「三家各付 per」等价于把另外两家的 per 收回 payer 头上，赢家金额不变。
+            if (hasContract)
+            {
+                for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+                {
+                    if (seat == round.WinnerSeat || seat == contractPayer)
+                    {
+                        continue;
+                    }
+
+                    delta[seat] += per;
+                    delta[contractPayer] -= per;
+                }
+            }
+
+            // 结算第 2 步跟庄：赢家不是庄家且变体开启；第 3 步连庄奖励：赢家就是庄家且本局表值大于 0。
+            if (round.WinnerSeat != started.BankerSeat)
+            {
+                if (variants.FollowingBanker > 0)
+                {
+                    delta[round.WinnerSeat] += variants.FollowingBanker;
+                    delta[started.BankerSeat] -= variants.FollowingBanker;
+                }
+            }
+            else
+            {
+                int bonus = DealerStreakBonus(variants.DealerStreakBonus, started.DealerStreak);
+                for (byte seat = 0; bonus > 0 && seat < GameState.PlayerCount; seat++)
+                {
+                    delta[seat] = seat == started.BankerSeat ? delta[seat] + (3 * bonus) : delta[seat] - bonus;
+                }
+            }
+
+            // 结算第 4 步中马：变体开启且本局产了 HorseRevealed 才可能支付；马座位 = 物理 id % 4。
+            if (variants.HorseBonus > 0 && TryGetHorseSeat(events, roundEndedIndex, out byte horseSeat)
+                && horseSeat == round.WinnerSeat)
+            {
+                for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+                {
+                    delta[seat] = seat == round.WinnerSeat
+                        ? delta[seat] + (3 * variants.HorseBonus)
+                        : delta[seat] - variants.HorseBonus;
+                }
+            }
+
+            candidates.Add(delta);
         }
 
-        // 结算第 2 步跟庄：赢家不是庄家且变体开启；第 3 步连庄奖励：赢家就是庄家且本局表值大于 0。
-        if (round.WinnerSeat != started.BankerSeat)
+        return candidates;
+    }
+
+    /// <summary>
+    /// 断言实测 delta 与候选期望恰好一个相等：非抢杠局候选唯一（等价于原「精确相等」断言）；
+    /// 抢杠局在未显式给有无鬼时有两个合法基分候选，仍要求恰好命中一个。
+    /// </summary>
+    private static void AssertDeltaMatches(int[] actual, IReadOnlyList<int[]> candidates)
+    {
+        Assert.NotEmpty(candidates);
+        Assert.Equal(1, candidates.Count(candidate => candidate.SequenceEqual(actual)));
+    }
+
+    /// <summary>
+    /// 每份金额候选：显式有无鬼时只有一个；抢杠分支（不置 NoJoker，事件流无法分辨有无鬼）缺显式值时
+    /// 两个合法基分都给；其余分支按 NoJoker 位取——这四个记账入口按契约置/清该位，位即事实。
+    /// </summary>
+    private static IReadOnlyList<int> CandidateShares(
+        RoundEndedPayload round,
+        bool sevenPairs,
+        bool kongUpFlower,
+        bool? winnerHasJoker)
+    {
+        const ScoreActionType RobbingBits =
+            ScoreActionType.RobbingTheKong | ScoreActionType.RobbingTheKongPayForEveryone;
+        int multiplier = kongUpFlower ? 2 : 1;
+
+        if (winnerHasJoker is bool explicitJoker)
         {
-            if (variants.FollowingBanker > 0)
-            {
-                delta[round.WinnerSeat] += variants.FollowingBanker;
-                delta[started.BankerSeat] -= variants.FollowingBanker;
-            }
+            return [IntegrationSupport.PerShare(explicitJoker, sevenPairs, multiplier)];
         }
-        else
+
+        if ((round.ActionType & RobbingBits) != 0)
         {
-            int bonus = DealerStreakBonus(variants.DealerStreakBonus, started.DealerStreak);
-            for (byte seat = 0; bonus > 0 && seat < GameState.PlayerCount; seat++)
+            return
+            [
+                IntegrationSupport.PerShare(winnerHasJoker: true, sevenPairs, multiplier),
+                IntegrationSupport.PerShare(winnerHasJoker: false, sevenPairs, multiplier),
+            ];
+        }
+
+        return [IntegrationSupport.PerShare((round.ActionType & ScoreActionType.NoJoker) == 0, sevenPairs, multiplier)];
+    }
+
+    /// <summary>取本局的 HorseRevealed 马座位：从 RoundEnded 往前扫到本局 RoundStarted 为止。</summary>
+    private static bool TryGetHorseSeat(
+        IReadOnlyList<SessionEvent> events,
+        int roundEndedIndex,
+        out byte horseSeat)
+    {
+        for (int index = roundEndedIndex - 1; index >= 0; index--)
+        {
+            if (events[index].Kind == SessionEventKind.RoundStarted)
             {
-                delta[seat] = seat == started.BankerSeat ? delta[seat] + (3 * bonus) : delta[seat] - bonus;
+                break;
+            }
+
+            if (events[index].Kind == SessionEventKind.HorseRevealed)
+            {
+                horseSeat = SessionEventPayloadReader.ReadHorseRevealed(events[index]).HorseSeat;
+                return true;
             }
         }
 
-        return delta;
+        horseSeat = byte.MaxValue;
+        return false;
     }
 }

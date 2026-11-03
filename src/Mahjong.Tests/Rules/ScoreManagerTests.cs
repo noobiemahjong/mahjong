@@ -7,7 +7,8 @@ namespace Mahjong.Tests.Rules;
 /// 计分账本契约：单次动作先校验再写暂存（失败不改状态）、每次计分动作四座净 0、
 /// Release/RollbackRound 的分层语义与幂等、只读视图不能改内部状态。
 /// 数值锚点按手算：无鬼自摸 +12/-4×3；有鬼 +6/-2×3；七对无鬼 +24/-8×3；七对有鬼 +12/-4×3；
-/// 杠上开花再 ×2；明杠 +3/-3、暗杠 +6/-2×3、补杠 +3/-1×3；连庄奖励 +3b/-b×3；跟庄 +1/-1。
+/// 杠上开花再 ×2；明杠 +3/-3、暗杠 +6/-2×3、补杠 +3/-1×3；连庄奖励 +3b/-b×3；跟庄 +1/-1；
+/// 抢杠 +3×base/-3×base、杠上开花承包 +3×2×base/-3×2×base、12 张承包 +3×base/-3×base（均单 payer、四座和 0）。
 /// </summary>
 public sealed class ScoreManagerTests
 {
@@ -78,10 +79,11 @@ public sealed class ScoreManagerTests
     [InlineData(32768)]
     [InlineData(49152)]
     [InlineData(16385)]
+    [InlineData(24576)]
     public void Apply_UndefinedFlagBits_ThrowsAndLeavesStateUnchanged(int rawType)
     {
-        // 未定义位取 16384、32768 及其组合（含「已定义位 + 未定义位」的混用），
-        // 不占用 512–8192：那几位是规则位，定义后不再是非法输入。
+        // 未定义位取 16384、32768 及其组合（含「已定义位 + 未定义位」的混用：16385 = 1 + 16384、
+        // 24576 = 8192 + 16384）。128–256 与 1024–8192 已是规则位，定义后不再是非法输入。
         ScoreManager scores = new();
         scores.Apply(3, 4, ScoreActionType.NoJoker);
         string before = RoundTestSupport.Book(scores);
@@ -355,6 +357,42 @@ public sealed class ScoreManagerTests
     }
 
     [Fact]
+    public void ScoreActionType_RobbingKongAndContractBitsKeepPublishedValues()
+    {
+        // T-1 §4 定稿位值：1024/2048/4096/8192；四位与 1–256 既有位两两不重叠，并集 15360。
+        Assert.Equal(1024, (ushort)ScoreActionType.RobbingTheKong);
+        Assert.Equal(2048, (ushort)ScoreActionType.RobbingTheKongPayForEveryone);
+        Assert.Equal(4096, (ushort)ScoreActionType.KongUpFlowerPayForEveryone);
+        Assert.Equal(8192, (ushort)ScoreActionType.TwelveCardsConceded);
+
+        ScoreActionType[] newBits =
+        [
+            ScoreActionType.RobbingTheKong,
+            ScoreActionType.RobbingTheKongPayForEveryone,
+            ScoreActionType.KongUpFlowerPayForEveryone,
+            ScoreActionType.TwelveCardsConceded,
+        ];
+
+        for (int left = 0; left < newBits.Length; left++)
+        {
+            for (int right = left + 1; right < newBits.Length; right++)
+            {
+                Assert.Equal(0, (ushort)(newBits[left] & newBits[right]));
+            }
+
+            Assert.Equal(0, (ushort)(newBits[left] & ScoreActionType.FollowingTheBanker));
+            Assert.Equal(0, (ushort)(newBits[left] & ScoreActionType.DealerStreak));
+        }
+
+        Assert.Equal(15360, newBits.Sum(bit => (int)(ushort)bit));
+        Assert.Equal(
+            15744,
+            (ushort)(ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker
+                | ScoreActionType.RobbingTheKong | ScoreActionType.RobbingTheKongPayForEveryone
+                | ScoreActionType.KongUpFlowerPayForEveryone | ScoreActionType.TwelveCardsConceded));
+    }
+
+    [Fact]
     public void Apply_AcceptsDealerStreakAndFollowingTheBankerBits()
     {
         // 掩码扩容后两位都是合法输入；未并入掩码时 Apply 会以未定义位抛 ArgumentOutOfRangeException。
@@ -367,6 +405,45 @@ public sealed class ScoreManagerTests
             ScoreActionType.DealerStreak | ScoreActionType.FollowingTheBanker,
             scores.RoundActionType);
         Assert.Equal(new short[] { 1, -1, 0, 0 }, scores.RoundDelta.ToArray());
+    }
+
+    [Theory]
+    [InlineData(1024)]
+    [InlineData(2048)]
+    [InlineData(4096)]
+    [InlineData(8192)]
+    public void Apply_AcceptsRobbingKongAndContractBits(int rawType)
+    {
+        // 掩码扩容后四位都是合法输入；未并入掩码时 Apply 会以未定义位抛 ArgumentOutOfRangeException。
+        ScoreActionType type = (ScoreActionType)rawType;
+        ScoreManager scores = new();
+
+        scores.Apply(seat: 2, delta: 3, type);
+
+        Assert.Equal(type, scores.RoundActionType);
+        Assert.Equal(new short[] { 0, 0, 3, 0 }, scores.RoundDelta.ToArray());
+    }
+
+    [Fact]
+    public void Apply_AcceptsAllRobbingAndContractBitsTogether()
+    {
+        ScoreManager scores = new();
+
+        scores.Apply(
+            seat: 1,
+            delta: -2,
+            ScoreActionType.RobbingTheKong
+            | ScoreActionType.RobbingTheKongPayForEveryone
+            | ScoreActionType.KongUpFlowerPayForEveryone
+            | ScoreActionType.TwelveCardsConceded);
+
+        Assert.Equal(
+            ScoreActionType.RobbingTheKong
+            | ScoreActionType.RobbingTheKongPayForEveryone
+            | ScoreActionType.KongUpFlowerPayForEveryone
+            | ScoreActionType.TwelveCardsConceded,
+            scores.RoundActionType);
+        Assert.Equal(new short[] { 0, -2, 0, 0 }, scores.RoundDelta.ToArray());
     }
 
     [Fact]

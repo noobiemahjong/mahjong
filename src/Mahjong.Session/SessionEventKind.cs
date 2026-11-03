@@ -38,4 +38,7 @@ public enum SessionEventKind : byte
 
     /// <summary>座位状态变化。</summary>
     SeatStateChanged = 12,
+
+    /// <summary>翻马：马牌所在座位与物理牌 id；公开事件，四座与观战者同一载荷。</summary>
+    HorseRevealed = 13,
 }

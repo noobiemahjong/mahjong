@@ -41,7 +41,7 @@ public sealed partial class GameSession
             EmitTurnStarted(seat);
             Tile drawn = _state.DrawFromWall(seat);
             _lastDrawn = drawn;
-            _lastDrawWasKongSupplement = false;
+            _lastDrawSource = DrawSource.Normal;
             EmitDrew(seat, drawn);
             bool hasDrawn = true;
 
@@ -93,7 +93,22 @@ public sealed partial class GameSession
                         && discardOutcome.Payload is GameCommand kongCommand
                         && kongCommand.Verb == CommandVerb.Kong)
                     {
-                        CommitSelfKong(seat);
+                        SelfKongCommitResult kongResult = new();
+                        IEnumerator<ActionState> kong = CommitSelfKong(seat, roundNo, bankerSeat, dealerStreak, kongResult);
+                        while (kong.MoveNext())
+                        {
+                            yield return kong.Current;
+                        }
+
+                        if (kongResult.RobbingKongWon)
+                        {
+                            // 抢杠胡算赢家胡：局末转移与连庄推进与自摸路径同口径（赢家 = 庄家则连庄 +1）。
+                            dealerStreak = kongResult.WinnerSeat == bankerSeat ? (byte)(dealerStreak + 1) : (byte)1;
+                            bankerSeat = kongResult.WinnerSeat;
+                            roundFinished = true;
+                            break;
+                        }
+
                         hasDrawn = true;
                         continue;
                     }
@@ -153,7 +168,7 @@ public sealed partial class GameSession
                 EmitTurnStarted(seat);
                 Tile nextDrawn = _state.DrawFromWall(seat);
                 _lastDrawn = nextDrawn;
-                _lastDrawWasKongSupplement = false;
+                _lastDrawSource = DrawSource.Normal;
                 EmitDrew(seat, nextDrawn);
                 hasDrawn = true;
             }
@@ -176,6 +191,10 @@ public sealed partial class GameSession
     /// <summary>等待响应窗口关闭；谓词每 tick 由调度器求值一次。</summary>
     private ActionState WaitForGroupClosure(long groupId) =>
         ActionState.WaitUntil(() => _requests.IsGroupClosed(groupId));
+
+    /// <summary>等待抢杠组关闭（全员应答或到 deadline）；谓词每 tick 由调度器求值一次。</summary>
+    private ActionState WaitForRobbingKongClosure(long groupId) =>
+        ActionState.WaitUntil(() => _requests.IsRobbingKongGroupClosed(groupId));
 
     /// <summary>产出 TurnStarted：截止 tick = 当前 tick + 回合超时。</summary>
     private void EmitTurnStarted(byte seat) =>
@@ -232,7 +251,7 @@ public sealed partial class GameSession
         _state.Discard(seat, handSlot);
         _events.EmitDiscarded(_scheduler.Tick, seat, (ushort)(player.Discards.Count - 1), tile.Id);
         _lastDrawn = null;
-        _lastDrawWasKongSupplement = false;
+        _lastDrawSource = DrawSource.Normal;
     }
 
     /// <summary>弃牌响应候选：其他座位中碰或明杠合法者，按座位号升序。</summary>
@@ -266,10 +285,65 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// 自己回合杠：Commit 三种形态之一，按「Melds 增加 → 暗杠；否则原碰升级 → 补杠」判定；
+    /// 自己回合杠：补杠分支先按「预判 → 抢杠阶段 → 提交或取消」三步走；暗杠没有第 4 张可抢，直接提交。
+    /// 抢杠阶段只开窗与收集应答，不动副露、手牌、杠分与补牌；无胜者时才按原顺序提交补杠
+    /// （<see cref="KongSkill.Commit"/> → Meld → 杠分 → 补牌 Drew）。
+    /// </summary>
+    /// <param name="seat">杠家座位 0–3。</param>
+    /// <param name="roundNo">本局局号，用于抢杠结算的 RoundResult。</param>
+    /// <param name="bankerSeat">本局庄家座位，用于抢杠后的跟庄/连庄。</param>
+    /// <param name="dealerStreak">本局连庄次数，用于抢杠后的连庄奖励。</param>
+    /// <param name="result">抢杠成立时写入赢家座位；未成立时保持不变。</param>
+    private IEnumerator<ActionState> CommitSelfKong(
+        byte seat,
+        byte roundNo,
+        byte bankerSeat,
+        byte dealerStreak,
+        SelfKongCommitResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        Tile drawn = _lastDrawn ?? throw new InvalidOperationException("自己回合杠必须有本回合摸到的牌。");
+        PlayerState player = _state.Players[seat];
+
+        if (_robbingKong && _kongSkill.TryCreateSupplementPlan(player, drawn, out KongSkill.KongSupplementPlan plan))
+        {
+            PlayerState[] candidates = FindRobbingKongCandidates(seat, plan.Tile);
+            if (candidates.Length > 0)
+            {
+                _robbingKongTile = plan.Tile;
+                long groupId = _requests.OpenRobbingKongGroup(
+                    plan.Tile,
+                    candidates,
+                    _scheduler.Tick,
+                    _scheduler.Tick + _config.ResponseTimeoutTicks)
+                    ?? throw new InvalidOperationException("非空候选的抢杠组必须返回 group id。");
+                yield return WaitForRobbingKongClosure(groupId);
+                RobbingKongResult robbing = _requests.TakeRobbingKongResult(groupId);
+                _robbingKongTile = null;
+
+                if (robbing.HasWinner)
+                {
+                    int handSlot = plan.HandSlots[0];
+                    bool sevenPairs = _wins.IsSevenPairs(
+                        CombineWithFourthTile(player.Hand.Items, plan.Tile),
+                        _joker);
+                    result.RobbingKongWon = true;
+                    result.WinnerSeat = robbing.WinnerSeat;
+                    CompleteRobbingKongWin(
+                        roundNo, bankerSeat, robbing.WinnerSeat, seat, plan.Tile, handSlot, sevenPairs, dealerStreak);
+                    yield break;
+                }
+            }
+        }
+
+        CommitSelfKongNow(seat);
+    }
+
+    /// <summary>
+    /// 自己回合杠的提交段：Commit 三种形态之一，按「Melds 增加 → 暗杠；否则原碰升级 → 补杠」判定；
     /// 产出 Meld、记杠分、从手牌末张读取补牌并产出 Drew。
     /// </summary>
-    private void CommitSelfKong(byte seat)
+    private void CommitSelfKongNow(byte seat)
     {
         Tile drawn = _lastDrawn ?? throw new InvalidOperationException("自己回合杠必须有本回合摸到的牌。");
         PlayerState player = _state.Players[seat];
@@ -298,8 +372,94 @@ public sealed partial class GameSession
 
         Tile supplement = player.Hand[player.Hand.Count - 1];
         _lastDrawn = supplement;
-        _lastDrawWasKongSupplement = true;
+        _lastDrawSource = kind == MeldKind.KongSupplement ? DrawSource.KongSupplement : DrawSource.KongConcealed;
         _events.EmitDrew(tick, seat, supplement.Id, (ushort)_state.Wall.Count);
+    }
+
+    /// <summary>
+    /// 其余三座中可抢补杠第 4 张者，按座位升序：手牌 + 第 4 张（临时数组，不改手牌区）过
+    /// <see cref="IWinChecker.IsWin"/> 或 <see cref="IWinChecker.IsSevenPairs"/> 成立即入选。
+    /// </summary>
+    private PlayerState[] FindRobbingKongCandidates(byte kongSeat, Tile fourthTile)
+    {
+        PlayerState[] buffer = new PlayerState[GameState.PlayerCount - 1];
+        int count = 0;
+        for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+        {
+            if (seat == kongSeat)
+            {
+                continue;
+            }
+
+            PlayerState candidate = _state.Players[seat];
+            if (CanRobbingKongWin(candidate, fourthTile))
+            {
+                buffer[count++] = candidate;
+            }
+        }
+
+        if (count == buffer.Length)
+        {
+            return buffer;
+        }
+
+        PlayerState[] result = new PlayerState[count];
+        Array.Copy(buffer, result, count);
+        return result;
+    }
+
+    /// <summary>手牌 + 第 4 张是否成胡（七对或常规胡）；只读，用临时数组，不改手牌区。</summary>
+    private bool CanRobbingKongWin(PlayerState player, Tile fourthTile)
+    {
+        Tile[] hand = CombineWithFourthTile(player.Hand.Items, fourthTile);
+        return _wins.IsSevenPairs(hand, _joker) || _wins.IsWin(hand, player.Melds, _joker);
+    }
+
+    /// <summary>手牌 + 第 4 张的临时数组，顺序为手牌原序再接第 4 张；不改动任何区域。</summary>
+    private static Tile[] CombineWithFourthTile(IReadOnlyList<Tile> hand, Tile fourthTile)
+    {
+        Tile[] combined = new Tile[hand.Count + 1];
+        for (int index = 0; index < hand.Count; index++)
+        {
+            combined[index] = hand[index];
+        }
+
+        combined[hand.Count] = fourthTile;
+        return combined;
+    }
+
+    /// <summary>
+    /// 抢杠结算：第 0 步把第 4 张从被抢杠者手牌（补杠预判给出的槽位）移入赢家手牌尾部，物理 id 不变；
+    /// 第 1 步记抢杠账，随后与自摸同尾段（跟庄 → 连庄 → 中马 → 取样/Release/写回/RoundEnded）。
+    /// 不调 <see cref="KongSkill.Commit"/>、不记杠分、不产 Meld、不产 Drew、不补牌；副露保持碰。
+    /// </summary>
+    /// <returns>下一局庄家座位（= 赢家）。</returns>
+    private byte CompleteRobbingKongWin(
+        byte roundNo,
+        byte bankerSeat,
+        byte winnerSeat,
+        byte robbedSeat,
+        Tile fourthTile,
+        int robbedHandSlot,
+        bool sevenPairs,
+        byte dealerStreak)
+    {
+        PlayerState robbed = _state.Players[robbedSeat];
+        PlayerState winner = _state.Players[winnerSeat];
+        if ((uint)robbedHandSlot >= (uint)robbed.Hand.Count || robbed.Hand[robbedHandSlot] != fourthTile)
+        {
+            throw new InvalidOperationException("抢杠结算时被抢的第 4 张不在预判槽位上。");
+        }
+
+        Tile tile = robbed.Hand.RemoveAt(robbedHandSlot);
+        winner.Hand.Append(tile);
+
+        // ① 抢杠账：base 取赢家移牌后的手牌口径（第 4 张已在手），七对 ×2；不置 SelfDrawn/NoJoker。
+        bool hasJoker = _jokerActive && ContainsTileType(winner.Hand.Items, _joker.Id);
+        int basePer = (hasJoker ? 2 : 4) * (sevenPairs ? 2 : 1);
+        _scores.ApplyRobbingKong(winnerSeat, robbedSeat, basePer, sevenPairs);
+
+        return SettleWinTail(roundNo, bankerSeat, winnerSeat, dealerStreak);
     }
 
     /// <summary>响应窗口胜者提交技能：碰不摸牌，明杠记杠分并取补牌。</summary>
@@ -334,19 +494,21 @@ public sealed partial class GameSession
             _scores.ApplyKong(winnerSeat, kind, discarderSeat);
             Tile supplement = player.Hand[player.Hand.Count - 1];
             _lastDrawn = supplement;
-            _lastDrawWasKongSupplement = true;
+            _lastDrawSource = DrawSource.KongExposed;
             _events.EmitDrew(tick, winnerSeat, supplement.Id, (ushort)_state.Wall.Count);
         }
         else
         {
             _lastDrawn = null;
-            _lastDrawWasKongSupplement = false;
+            _lastDrawSource = DrawSource.Normal;
         }
     }
 
     /// <summary>
-    /// 自摸结算：七对走 <see cref="ScoreManager.ApplySevenPairsSelfDrawn"/>（不受其他家杠位影响），
-    /// 普通自摸的 kongUpFlower 只取决于赢家本回合最近一次摸牌是否为杠后补牌。
+    /// 自摸结算：第 1 步按单链优先级取一个承包者（杠上开花承包 &gt; 12 张落地承包 &gt; 常规自摸），
+    /// 七对走 <see cref="ScoreManager.ApplySevenPairsSelfDrawn"/>（不受其他家杠位影响）。
+    /// 承包只重定向 payer，赢家金额不变；非承包的普通自摸仍按「本回合最近一次摸牌是杠后补牌」置
+    /// <see cref="ScoreActionType.KongUpFlower"/>（补杠/暗杠补牌也算，但不承包）。
     /// 结算顺序固定五步（T-2 §4）：①胡牌金额 → ②跟庄 → ③连庄奖励 → ④中马（T-4）→
     /// ⑤取样 delta/actionType → Release → 写回镜像 → 产 RoundEnded；返回下一局庄家。
     /// </summary>
@@ -364,28 +526,53 @@ public sealed partial class GameSession
             throw new InvalidOperationException("Win 请求结算时手牌既非七对也非常规胡。");
         }
 
-        // ① 胡牌金额：本批只有常规自摸与七对自摸；抢杠与三种承包的分支在 T-3 插入此处。
+        // ① 胡牌金额：单链优先级，命中即返回，一次胡牌只取一个承包者。
         bool hasJoker = _jokerActive && ContainsTileType(winner.Hand.Items, _joker.Id);
+        bool kongUpFlower = _lastDrawSource != DrawSource.Normal;
         if (sevenPairs)
         {
             _scores.ApplySevenPairsSelfDrawn(winnerSeat, hasJoker);
         }
+        else if (TryGetKongUpFlowerPayer(winner, out byte kongUpFlowerPayer))
+        {
+            _scores.ApplyKongUpFlowerContract(
+                winnerSeat,
+                kongUpFlowerPayer,
+                BaseScorePer(hasJoker, sevenPairs: false),
+                hasJoker,
+                sevenPairs: false);
+        }
+        else if (TryGetTwelveCardsPayer(winner, out byte twelveCardsPayer))
+        {
+            _scores.ApplyTwelveCardsContract(
+                winnerSeat,
+                twelveCardsPayer,
+                BaseScorePer(hasJoker, sevenPairs: false),
+                hasJoker);
+        }
         else
         {
-            _scores.ApplySelfDrawn(
-                winnerSeat,
-                hasJoker,
-                sevenPairs: false,
-                kongUpFlower: _lastDrawWasKongSupplement);
+            _scores.ApplySelfDrawn(winnerSeat, hasJoker, sevenPairs: false, kongUpFlower);
         }
 
-        // ② 跟庄：赢家不是庄家且变体开启才付，庄家当场付给赢家，每局最多一次。
+        return SettleWinTail(roundNo, bankerSeat, winnerSeat, dealerStreak);
+    }
+
+    /// <summary>
+    /// 自摸与抢杠共用的结算尾段（T-2 §4 第 2–5 步）：②跟庄 → ③连庄奖励 → ④中马 →
+    /// ⑤取样 delta/actionType → Release → 写回镜像 → 产 RoundEnded；返回下一局庄家（= 赢家）。
+    /// 中马步：墙头取一张进 <see cref="GameState.Revealed"/>，同 tick 产 <see cref="SessionEventKind.HorseRevealed"/>；
+    /// 墙空或无变体时整步跳过；事件恒在 RoundEnded 之前、同 tick。
+    /// </summary>
+    private byte SettleWinTail(byte roundNo, byte bankerSeat, byte winnerSeat, byte dealerStreak)
+    {
+        // ② 跟庄：赢家不是庄家且变体开启才付，庄家当场付给赢家，每局最多一次；抢杠胡同样算。
         if (winnerSeat != bankerSeat && _followingBanker > 0)
         {
             _scores.ApplyFollowingTheBanker(winnerSeat, bankerSeat, _followingBanker);
         }
 
-        // ③ 连庄奖励：赢家就是庄家且本局奖励金额大于 0 才付；第 8 局照常。
+        // ③ 连庄奖励：赢家就是庄家且本局奖励金额大于 0 才付；第 8 局照常；抢杠胡同样算庄家胡。
         if (winnerSeat == bankerSeat)
         {
             int bonus = DealerStreakBonus(dealerStreak);
@@ -395,7 +582,17 @@ public sealed partial class GameSession
             }
         }
 
-        // ④ 中马的位置：T-4 在此取墙头一张并入 Revealed、产马事件，本批不实现。
+        // ④ 中马：变体开启才翻；取牌前墙空则整步跳过（无事件、无支付、无区域变化）。
+        // 翻出的马牌从墙头取出并入公共揭示区，马座位 = 物理 id % 4；未命中不支付但仍产事件。
+        if (_horseBonus > 0 && _state.TryRevealHorse(out Tile horse))
+        {
+            byte horseSeat = (byte)(horse.Id % GameState.PlayerCount);
+            _events.EmitHorseRevealed(_scheduler.Tick, horseSeat, horse.Id);
+            if (horseSeat == winnerSeat)
+            {
+                _scores.ApplyHorseBonus(winnerSeat, _horseBonus);
+            }
+        }
 
         // ⑤ 收尾：D10 的结算 payload 统一经由公开的 RoundResult 构造，事件只从该快照取字段。
         short[] delta = CopyScores(_scores.RoundDelta);
@@ -405,6 +602,73 @@ public sealed partial class GameSession
         RoundResult result = new(roundNo, bankerSeat, winnerSeat, actionType, delta, CopyScores(_scores.TotalScores));
         _events.EmitRoundEnded(_scheduler.Tick, (sbyte)result.WinnerSeat, result.ScoreDelta, result.ActionType);
         return result.WinnerSeat;
+    }
+
+    /// <summary>每份基分：无鬼 4 / 有鬼 2，七对 ×2；三条承包与常规自摸共用同一口径。</summary>
+    private static int BaseScorePer(bool hasJoker, bool sevenPairs) =>
+        (hasJoker ? 2 : 4) * (sevenPairs ? 2 : 1);
+
+    /// <summary>
+    /// 杠上开花承包的 payer：变体开启、本回合最近一次摸牌来自明杠补牌，且该明杠有目标座位（放杠者）。
+    /// 只认明杠（<see cref="MeldKind.KongExposed"/>）：补杠/暗杠补牌自摸只置开花位、不承包。
+    /// 命中时返回赢家最后一条明杠的 <see cref="Meld.TargetSeat"/>。
+    /// </summary>
+    private bool TryGetKongUpFlowerPayer(PlayerState winner, out byte payerSeat)
+    {
+        payerSeat = Meld.NoTargetSeat;
+        if (!_kongFlowerContract || _lastDrawSource != DrawSource.KongExposed)
+        {
+            return false;
+        }
+
+        for (int index = winner.Melds.Count - 1; index >= 0; index--)
+        {
+            Meld meld = winner.Melds[index];
+            if (meld.Kind != MeldKind.KongExposed)
+            {
+                continue;
+            }
+
+            if (meld.TargetSeat >= GameState.PlayerCount)
+            {
+                return false;
+            }
+
+            payerSeat = meld.TargetSeat;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 12 张落地承包的 payer：变体开启、赢家恰 4 副露且全明（暗杠 <see cref="Meld.Opened"/> 为 false，直接排除）、
+    /// 第 4 副露（下标 3）有供牌者。补杠保留原碰的 <see cref="Meld.TargetSeat"/>，因此自动取原放牌者。
+    /// </summary>
+    private bool TryGetTwelveCardsPayer(PlayerState winner, out byte payerSeat)
+    {
+        payerSeat = Meld.NoTargetSeat;
+        if (!_twelveCardsContract || winner.Melds.Count != GameState.PlayerCount)
+        {
+            return false;
+        }
+
+        foreach (Meld meld in winner.Melds)
+        {
+            if (!meld.Opened)
+            {
+                return false;
+            }
+        }
+
+        Meld fourth = winner.Melds[GameState.PlayerCount - 1];
+        if (fourth.TargetSeat >= GameState.PlayerCount)
+        {
+            return false;
+        }
+
+        payerSeat = fourth.TargetSeat;
+        return true;
     }
 
     /// <summary>

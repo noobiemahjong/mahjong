@@ -11,8 +11,10 @@ namespace Mahjong.Core.Flow;
 /// </summary>
 public static class StateHash
 {
-    /// <summary>字节布局版本，写在流首字节。</summary>
-    private const byte LayoutVersion = 2;
+    /// <summary>
+    /// 字节布局版本，写在流首字节。3 = 在牌墙之后追加公共揭示区（<see cref="GameState.Revealed"/>）段。
+    /// </summary>
+    private const byte LayoutVersion = 3;
 
     /// <summary>计算局面哈希。</summary>
     /// <param name="state">要哈希的权威局面；只读不改。</param>
@@ -28,6 +30,7 @@ public static class StateHash
 
         WriteU8(span, ref offset, LayoutVersion);
         WriteTileZone(span, ref offset, state.Wall);
+        WriteTileZone(span, ref offset, state.Revealed);
 
         PlayerState[] players = state.Players;
         WriteU8(span, ref offset, (byte)players.Length);
@@ -66,7 +69,7 @@ public static class StateHash
     /// <summary>字节流长度：先量再写，避免扩容与每 tick 的大对象分配。</summary>
     private static int Measure(GameState state)
     {
-        int size = 1 + 2 + (2 * state.Wall.Count) + 1 + 1 + 2;
+        int size = 1 + 2 + (2 * state.Wall.Count) + 2 + (2 * state.Revealed.Count) + 1 + 1 + 2;
 
         PlayerState[] players = state.Players;
         for (int seat = 0; seat < players.Length; seat++)

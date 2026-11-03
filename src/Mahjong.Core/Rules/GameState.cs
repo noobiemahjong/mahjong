@@ -15,6 +15,9 @@ public sealed class GameState
     /// <summary>牌墙初始容量提示，等于物理牌总数。</summary>
     private const int WallCapacity = TotalTiles;
 
+    /// <summary>公共揭示区初始容量提示；一局至多揭示 1 张马牌，留冗余避免扩容。</summary>
+    private const int RevealedCapacity = 8;
+
     /// <summary>每局起手张数；庄家首回合另摸 1 张。</summary>
     private const int InitialHandSize = 13;
 
@@ -28,6 +31,7 @@ public sealed class GameState
     public GameState()
     {
         Wall = new TileZone(new ZoneId(ZoneId.PublicSeat, ZoneKind.Wall), WallCapacity);
+        Revealed = new TileZone(new ZoneId(ZoneId.PublicSeat, ZoneKind.Revealed), RevealedCapacity);
         Players = new PlayerState[PlayerCount];
         for (byte seat = 0; seat < PlayerCount; seat++)
         {
@@ -40,6 +44,12 @@ public sealed class GameState
 
     /// <summary>牌墙：正常摸牌从头部取，杠补牌从末尾取。</summary>
     public TileZone Wall { get; }
+
+    /// <summary>
+    /// 公共揭示区（区域 id 为 <c>ZoneId(PublicSeat, ZoneKind.Revealed)</c>）：规则性公开的牌，
+    /// 目前只承放中马翻出的马牌，按翻出顺序排列。<see cref="Deal"/> 会清空它，跨局不累积。
+    /// </summary>
+    public TileZone Revealed { get; }
 
     /// <summary>四名玩家，下标即座位号。</summary>
     public PlayerState[] Players { get; }
@@ -106,6 +116,7 @@ public sealed class GameState
         }
 
         Wall.Clear();
+        Revealed.Clear();
         foreach (PlayerState player in Players)
         {
             player.Hand.Clear();
@@ -161,6 +172,25 @@ public sealed class GameState
         Tile tile = Wall.RemoveAt(0);
         player.Hand.Append(tile);
         return tile;
+    }
+
+    /// <summary>
+    /// 翻马取牌：从牌墙头端取一张并追加到 <see cref="Revealed"/>（牌墙 −1、物理 id 不变）。
+    /// 牌墙为空时整步跳过：返回 false、不改动任何区域、不产事件。
+    /// </summary>
+    /// <param name="horseTile">取到的牌；牌墙为空时为 <c>default</c>。</param>
+    /// <returns>取到牌返回 true；牌墙为空返回 false。</returns>
+    public bool TryRevealHorse(out Tile horseTile)
+    {
+        if (Wall.Count == 0)
+        {
+            horseTile = default;
+            return false;
+        }
+
+        horseTile = Wall.RemoveAt(0);
+        Revealed.Append(horseTile);
+        return true;
     }
 
     /// <summary>从牌墙末尾摸一张牌（杠补）并追加到该座位手牌。</summary>

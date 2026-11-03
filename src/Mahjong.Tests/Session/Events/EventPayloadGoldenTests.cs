@@ -311,6 +311,27 @@ public sealed class EventPayloadGoldenTests
         Assert.Equal(new byte[] { 0x00, 0x02 }, sessionEvent.Payload.ToArray());
     }
 
+    [Fact]
+    public void HorseRevealed_EncodesHorseSeatAndTileIdAsThreeLittleEndianBytes()
+    {
+        var buffer = new SessionEventBuffer();
+        buffer.EmitHorseRevealed(tick: 30, horseSeat: 2, tileId: 21);
+
+        SessionEvent sessionEvent = Assert.Single(buffer.Drain(255));
+
+        Assert.Equal(SessionEventKind.HorseRevealed, sessionEvent.Kind);
+        Assert.Equal(new byte[] { 0x02, 0x15, 0x00 }, sessionEvent.Payload.ToArray());
+        Assert.Equal(3, sessionEvent.Payload.Length);
+        Assert.Equal(new HorseRevealedPayload(2, 21), SessionEventPayloadReader.ReadHorseRevealed(sessionEvent));
+
+        // 公开事件：座位视角与全景编码完全相同（tileId 直出 1–136，不像摸牌按 viewer 置 -1）。
+        var seatView = new SessionEventBuffer();
+        seatView.EmitHorseRevealed(tick: 30, horseSeat: 2, tileId: 21);
+        Assert.Equal(
+            sessionEvent.Payload.ToArray(),
+            Assert.Single(seatView.Drain(2)).Payload.ToArray());
+    }
+
     private static Tile[] Tiles(params int[] physicalIds) =>
         physicalIds.Select(RulesTestData.FromId).ToArray();
 }

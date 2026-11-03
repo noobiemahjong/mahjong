@@ -7,11 +7,13 @@ namespace Mahjong.Core.Rules;
 /// 单次计分动作先完成全部校验，再一次性写暂存，失败不改变任何状态；局终用 <see cref="Release"/>
 /// 把暂存并入总分，流局先 <see cref="RollbackRound"/> 再 <see cref="Release"/>，净变化为 0。
 ///
-/// 计分口径：自摸（无鬼 4 / 有鬼 2，七对 ×2，杠上开花 ×2）、明杠、暗杠、补杠、连庄奖励、跟庄；
-/// 不含抢杠、承包、中马。单次计分动作四座 delta 之和均为 0。
+/// 计分口径：自摸（无鬼 4 / 有鬼 2，七对 ×2，杠上开花 ×2）、明杠、暗杠、补杠、连庄奖励、跟庄、
+/// 中马、抢杠、杠上开花承包、12 张落地承包。单次计分动作四座 delta 之和均为 0。
 ///
 /// 金额上界：单次自摸单座最多 +24（七对与杠上开花互斥，各自只能再乘一次 ×2），单次杠单座最多 +6；
-/// 按规则表取值时连庄奖励单座最多 ±9（每家最多 3）、跟庄单座最多 ±1；
+/// 按规则表取值时连庄奖励单座最多 ±9（每家最多 3）、跟庄单座最多 ±1、中马单座最多 ±3（每家最多 1）；
+/// 三条承包入口按调用方给的基分记账，抢杠单座最多 ±24、杠上开花承包最多 ±48、12 张最多 ±12
+/// （12 张要求 4 副露，与七对互斥，基分不含七对的 ×2）；
 /// 每局单座净额是这些动作的累加，8 局累计仍远小于 short 的 ±32767，故用 short 记账且不做溢出保护。
 ///
 /// 实例非线程安全；座位固定 4 个。
@@ -31,7 +33,12 @@ public sealed class ScoreManager
         | ScoreActionType.KongUpFlower
         | ScoreActionType.NoJoker
         | ScoreActionType.DealerStreak
-        | ScoreActionType.FollowingTheBanker;
+        | ScoreActionType.FollowingTheBanker
+        | ScoreActionType.HorseWinner
+        | ScoreActionType.RobbingTheKong
+        | ScoreActionType.RobbingTheKongPayForEveryone
+        | ScoreActionType.KongUpFlowerPayForEveryone
+        | ScoreActionType.TwelveCardsConceded;
 
     /// <summary>三种杠位的并集，用于「七对须 0 副露」与「杠上开花须有杠」的判定。</summary>
     private const ScoreActionType KongActions =
@@ -378,6 +385,247 @@ public sealed class ScoreManager
         _roundDelta[winnerSeat] = (short)(_roundDelta[winnerSeat] + amount);
         _roundDelta[bankerSeat] = (short)(_roundDelta[bankerSeat] - amount);
         _roundActionType |= ScoreActionType.FollowingTheBanker;
+    }
+
+    /// <summary>
+    /// 中马结算：赢家 <c>+3*horseBonus</c>、其余三家各 <c>-horseBonus</c>，四座 delta 之和为 0。
+    /// 置位 <see cref="ScoreActionType.HorseWinner"/>（一位规则：赢家收的一笔与三家各付的一笔同置）。
+    /// <paramref name="horseBonus"/> 为 0 时既不改暂存也不置位：变体关闭或本局不翻马。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做记账：马是否命中（<c>horseSeat == winnerSeat</c>）由调用方判定；payer 恒为其余三家，
+    /// 与承包者无关，因此不接收 payer 参数，也不设金额上界。
+    /// </summary>
+    /// <param name="winnerSeat">本局赢家座位 0–3。</param>
+    /// <param name="horseBonus">三家各付的中马金额，非负；0 表示本局不付。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="winnerSeat"/> 不在 0–3，或 <paramref name="horseBonus"/> 为负；失败时不改变任何状态。
+    /// </exception>
+    public void ApplyHorseBonus(byte winnerSeat, int horseBonus)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (horseBonus < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(horseBonus),
+                horseBonus,
+                "Horse bonus must not be negative.");
+        }
+
+        if (horseBonus == 0)
+        {
+            return;
+        }
+
+        // 校验全部完成后再一次性写暂存，保证失败路径不改状态。
+        for (byte seat = 0; seat < SeatCount; seat++)
+        {
+            _roundDelta[seat] = seat == winnerSeat
+                ? (short)(_roundDelta[seat] + (horseBonus * 3))
+                : (short)(_roundDelta[seat] - horseBonus);
+        }
+
+        _roundActionType |= ScoreActionType.HorseWinner;
+    }
+
+    /// <summary>
+    /// 抢杠结算：赢家 <c>+3*basePer</c>、被抢杠者 <c>-3*basePer</c>，其余两座 0，四座 delta 之和为 0。
+    /// 置位：赢家笔 <see cref="ScoreActionType.RobbingTheKong"/>，七对抢杠并置 <see cref="ScoreActionType.SevenPairs"/>；
+    /// 被抢杠者笔 <see cref="ScoreActionType.RobbingTheKongPayForEveryone"/>；不置 <see cref="ScoreActionType.SelfDrawn"/>
+    /// 与 <see cref="ScoreActionType.NoJoker"/>：抢杠胡不算自摸，有无鬼已折进基分。
+    /// <paramref name="basePer"/> 为 0 时既不改暂存也不置位。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做记账：不判定抢杠是否成立、不查手牌、不校验两家不同座（同座时两笔相抵为 0，仍按位规则置位），
+    /// 也不设金额上界。
+    /// </summary>
+    /// <param name="winnerSeat">抢杠胡的赢家座位 0–3。</param>
+    /// <param name="robbedSeat">被抢杠者座位 0–3，即本笔的 payer。</param>
+    /// <param name="basePer">每份基分，非负，由调用方按有无鬼与七对取值；0 表示本笔不计账。</param>
+    /// <param name="sevenPairs">本手牌按七对抢杠，置 <see cref="ScoreActionType.SevenPairs"/>。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="winnerSeat"/> 或 <paramref name="robbedSeat"/> 不在 0–3，或 <paramref name="basePer"/> 为负；
+    /// 失败时不改变任何状态。
+    /// </exception>
+    public void ApplyRobbingKong(byte winnerSeat, byte robbedSeat, int basePer, bool sevenPairs)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (robbedSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(robbedSeat),
+                robbedSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (basePer < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(basePer),
+                basePer,
+                "Robbing-the-kong base score must not be negative.");
+        }
+
+        int per = basePer;
+        if (per == 0)
+        {
+            return;
+        }
+
+        // 校验全部完成后再一次性写暂存，保证失败路径不改状态。
+        int share = per * 3;
+        _roundDelta[winnerSeat] = (short)(_roundDelta[winnerSeat] + share);
+        _roundDelta[robbedSeat] = (short)(_roundDelta[robbedSeat] - share);
+        _roundActionType |= ScoreActionType.RobbingTheKong;
+        if (sevenPairs)
+        {
+            _roundActionType |= ScoreActionType.SevenPairs;
+        }
+
+        _roundActionType |= ScoreActionType.RobbingTheKongPayForEveryone;
+    }
+
+    /// <summary>
+    /// 杠上开花承包结算：赢家 <c>+3*perK</c>、放明杠者 <c>-3*perK</c>，其余两座 0，四座 delta 之和为 0；
+    /// <c>perK = 2*basePer</c>（杠分 = 基分 × 2），基分与原自摸的每份金额同口径。
+    /// 置位：赢家笔 <see cref="ScoreActionType.SelfDrawn"/> 与 <see cref="ScoreActionType.KongUpFlower"/>，
+    /// 无鬼并置 <see cref="ScoreActionType.NoJoker"/>，七对并置 <see cref="ScoreActionType.SevenPairs"/>；
+    /// 放明杠者笔 <see cref="ScoreActionType.KongUpFlowerPayForEveryone"/>。
+    /// <paramref name="basePer"/> 为 0 时既不改暂存也不置位。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做记账：承包是否成立（最近摸牌来自明杠补牌且该明杠有目标座位）由调用方判定，
+    /// 不查本局杠位、不校验两家不同座（同座时两笔相抵为 0，仍按位规则置位），也不设金额上界。
+    /// </summary>
+    /// <param name="winnerSeat">自摸赢家座位 0–3。</param>
+    /// <param name="payerSeat">放明杠者座位 0–3，即本笔的 payer。</param>
+    /// <param name="basePer">每份基分，非负；本方法内部乘 2 得杠分。</param>
+    /// <param name="hasJoker">本局有鬼牌且赢家手牌含该牌种；<c>false</c> 时置 <see cref="ScoreActionType.NoJoker"/>。</param>
+    /// <param name="sevenPairs">本手牌按七对胡；与杠上开花在实战互斥，按入参置位。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="winnerSeat"/> 或 <paramref name="payerSeat"/> 不在 0–3，或 <paramref name="basePer"/> 为负；
+    /// 失败时不改变任何状态。
+    /// </exception>
+    public void ApplyKongUpFlowerContract(byte winnerSeat, byte payerSeat, int basePer, bool hasJoker, bool sevenPairs)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (payerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(payerSeat),
+                payerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (basePer < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(basePer),
+                basePer,
+                "Kong-up-flower contract base score must not be negative.");
+        }
+
+        int per = basePer * 2;
+        if (per == 0)
+        {
+            return;
+        }
+
+        // 校验全部完成后再一次性写暂存，保证失败路径不改状态。
+        int share = per * 3;
+        _roundDelta[winnerSeat] = (short)(_roundDelta[winnerSeat] + share);
+        _roundDelta[payerSeat] = (short)(_roundDelta[payerSeat] - share);
+        _roundActionType |= ScoreActionType.SelfDrawn | ScoreActionType.KongUpFlower;
+        if (!hasJoker)
+        {
+            _roundActionType |= ScoreActionType.NoJoker;
+        }
+
+        if (sevenPairs)
+        {
+            _roundActionType |= ScoreActionType.SevenPairs;
+        }
+
+        _roundActionType |= ScoreActionType.KongUpFlowerPayForEveryone;
+    }
+
+    /// <summary>
+    /// 12 张落地承包结算：赢家 <c>+3*basePer</c>、第 4 副露的供牌者 <c>-3*basePer</c>，其余两座 0，四座 delta 之和为 0。
+    /// 置位：赢家笔 <see cref="ScoreActionType.SelfDrawn"/> 与 <see cref="ScoreActionType.TwelveCardsConceded"/>，
+    /// 无鬼并置 <see cref="ScoreActionType.NoJoker"/>；供牌者笔为同一个 <see cref="ScoreActionType.TwelveCardsConceded"/>
+    /// （一位规则，两侧同置）。
+    /// <paramref name="basePer"/> 为 0 时既不改暂存也不置位。
+    /// 只写本局暂存，<see cref="Release"/> 才并入总分，<see cref="RollbackRound"/> 撤回。
+    /// 本方法只做记账：承包是否成立（4 副露全明且第 4 副露有供牌者）由调用方判定，
+    /// 不校验两家不同座（同座时两笔相抵为 0，仍按位规则置位），也不设金额上界。
+    /// </summary>
+    /// <param name="winnerSeat">自摸赢家座位 0–3。</param>
+    /// <param name="payerSeat">第 4 副露的供牌者座位 0–3，即本笔的 payer。</param>
+    /// <param name="basePer">每份基分，非负（七对与 4 副露互斥，基分不含七对的 ×2）。</param>
+    /// <param name="hasJoker">本局有鬼牌且赢家手牌含该牌种；<c>false</c> 时置 <see cref="ScoreActionType.NoJoker"/>。</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="winnerSeat"/> 或 <paramref name="payerSeat"/> 不在 0–3，或 <paramref name="basePer"/> 为负；
+    /// 失败时不改变任何状态。
+    /// </exception>
+    public void ApplyTwelveCardsContract(byte winnerSeat, byte payerSeat, int basePer, bool hasJoker)
+    {
+        if (winnerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(winnerSeat),
+                winnerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (payerSeat >= SeatCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(payerSeat),
+                payerSeat,
+                $"Seat must be within 0-{SeatCount - 1}.");
+        }
+
+        if (basePer < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(basePer),
+                basePer,
+                "Twelve-cards contract base score must not be negative.");
+        }
+
+        int per = basePer;
+        if (per == 0)
+        {
+            return;
+        }
+
+        // 校验全部完成后再一次性写暂存，保证失败路径不改状态。
+        int share = per * 3;
+        _roundDelta[winnerSeat] = (short)(_roundDelta[winnerSeat] + share);
+        _roundDelta[payerSeat] = (short)(_roundDelta[payerSeat] - share);
+        _roundActionType |= ScoreActionType.SelfDrawn | ScoreActionType.TwelveCardsConceded;
+        if (!hasJoker)
+        {
+            _roundActionType |= ScoreActionType.NoJoker;
+        }
     }
 
     /// <summary>撤回本局全部暂存：<see cref="RoundDelta"/> 归 0、<see cref="RoundActionType"/> 归 None；累计总分不变。幂等。</summary>

@@ -263,6 +263,20 @@ public static class SessionEventPayloadReader
         return new SeatStateChangedPayload(payload[0], payload[1]);
     }
 
+    /// <summary>读取 <see cref="SessionEventKind.HorseRevealed"/> 的 payload。</summary>
+    /// <param name="sessionEvent">种类必须是 HorseRevealed 的事件。</param>
+    /// <returns>解析后的 payload；公开事件，四座与观战者同值。</returns>
+    /// <exception cref="ArgumentException">事件种类不是 HorseRevealed。</exception>
+    /// <exception cref="InvalidDataException">payload 长度不是 3 字节（含 2B 与 4B 载荷）。</exception>
+    public static HorseRevealedPayload ReadHorseRevealed(SessionEvent sessionEvent)
+    {
+        ReadOnlySpan<byte> payload = GetPayload(sessionEvent, SessionEventKind.HorseRevealed);
+        RequireLength(payload, 3, SessionEventKind.HorseRevealed);
+        return new HorseRevealedPayload(
+            payload[0],
+            BinaryPrimitives.ReadUInt16LittleEndian(payload.Slice(1, 2)));
+    }
+
     private static ReadOnlySpan<byte> GetPayload(SessionEvent sessionEvent, SessionEventKind expected)
     {
         if (sessionEvent.Kind != expected)

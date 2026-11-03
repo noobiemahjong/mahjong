@@ -36,6 +36,18 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
 
     /// <summary>跟庄金额；0 表示变体关闭，非庄胡不付跟庄。</summary>
     private readonly int _followingBanker;
+
+    /// <summary>中马金额；0 表示变体关闭，不翻马、无马事件、无支付。</summary>
+    private readonly int _horseBonus;
+
+    /// <summary>抢杠变体开关；关闭时不预判、不开抢杠窗口，补杠直接成立。</summary>
+    private readonly bool _robbingKong;
+
+    /// <summary>杠上开花承包变体开关；关闭时明杠补牌自摸按常规自摸结算，不重定向 payer。</summary>
+    private readonly bool _kongFlowerContract;
+
+    /// <summary>12 张落地承包变体开关；关闭时 4 明副露自摸按常规自摸结算。</summary>
+    private readonly bool _twelveCardsContract;
     private readonly byte? _humanSeat;
     private readonly int _botDelayTicks;
     private readonly GameState _state = new();
@@ -54,7 +66,12 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
     private bool _started;
     private bool _gameOver;
     private Tile? _lastDrawn;
-    private bool _lastDrawWasKongSupplement;
+
+    /// <summary>本回合最近一次摸牌的来源；只用于杠上开花位与承包判定，不进局面、不进状态哈希。</summary>
+    private DrawSource _lastDrawSource;
+
+    /// <summary>抢杠窗口内被抢的第 4 张；窗口关闭后清空，用于按请求 Kind 复核抢杠胡。</summary>
+    private Tile? _robbingKongTile;
 
     /// <summary>
     /// 创建会话：校验配置并装配局面、计分、校验器、请求登记与调度器；不启动、不产事件。
@@ -89,6 +106,10 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
         _jokerActive = IsJokerActive(_joker);
         _dealerStreakBonus = content.Variants.DealerStreakBonus;
         _followingBanker = content.Variants.FollowingBanker;
+        _horseBonus = content.Variants.HorseBonus;
+        _robbingKong = content.Variants.RobbingKong;
+        _kongFlowerContract = content.Variants.KongFlowerContract;
+        _twelveCardsContract = content.Variants.TwelveCardsContract;
         _botDelayTicks = ComputeBotDelayTicks(config.TickRate);
         _verifier = new CardAndSkillVerifier(wins, _joker);
         _botPolicy = new SimpleBotPolicy(wins, _verifier);
@@ -320,6 +341,19 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
                     : "当前局面不允许暗杠或补杠。";
 
             case CommandVerb.Win:
+                // 抢杠胡的胡牌张是被抢的第 4 张，不在应答者手里：按 Kind 分流，绝不能落到 SelfDrawn 判定。
+                if (request.Kind == RequestKind.RobbingKong)
+                {
+                    if (_robbingKongTile is not Tile fourthTile)
+                    {
+                        return "当前没有可抢的补杠牌。";
+                    }
+
+                    return CanRobbingKongWin(player, fourthTile)
+                        ? null
+                        : "当前手牌不能抢杠胡。";
+                }
+
                 if (_verifier.Verify(_state, player, SkillId.SelfDrawnWith7Pairs, card: null, targetCard: null))
                 {
                     return null;
@@ -395,7 +429,10 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
         }
     }
 
-    /// <summary>执行一条 Bot 应答；请求已被结算时跳过，决策被拒视为 bug 抛异常。</summary>
+    /// <summary>
+    /// 执行一条 Bot 应答；请求已被结算时跳过，决策被拒视为 bug 抛异常。
+    /// 抢杠请求在会话侧按 Kind 分流：能抢杠胡出 Win，否则 Pass（Core <see cref="SimpleBotPolicy"/> 不识别该请求种类）。
+    /// </summary>
     private void ExecuteBot(BotSubmission submission)
     {
         if (!_requests.TryFindOpen(submission.Seat, submission.RequestId, out PendingRequest request))
@@ -406,6 +443,26 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
         // 该请求已被别的提交应答（例如宿主越权代答 Bot 座位）：Bot 不再重复应答，避免制造一次「被拒」的 bug 路径。
         if (_answeredRequestIds.Contains(request.RequestId))
         {
+            return;
+        }
+
+        if (request.Kind == RequestKind.RobbingKong)
+        {
+            if (_robbingKongTile is not Tile fourthTile)
+            {
+                throw new InvalidOperationException("抢杠请求结算时缺少被抢的第 4 张牌。");
+            }
+
+            CommandVerb robbingVerb = CanRobbingKongWin(_state.Players[request.Seat], fourthTile)
+                ? CommandVerb.Win
+                : CommandVerb.Pass;
+            GameCommand robbingCommand = new(0, 0, submission.Seat, robbingVerb, 0, 0, request.RequestId);
+            SubmitResult robbingResult = SubmitCore(robbingCommand);
+            if (!robbingResult.Accepted)
+            {
+                throw new InvalidOperationException($"Bot 对抢杠请求 {request.RequestId} 的决策被拒：{robbingResult.Reason}");
+            }
+
             return;
         }
 
@@ -537,4 +594,34 @@ public sealed partial class GameSession : IRequestRegistry, ISessionRequestSink
 
     /// <summary>待处理的 Bot 应答：请求 id、到期 tick 与座位。</summary>
     private readonly record struct BotSubmission(long RequestId, long DueTick, byte Seat);
+
+    /// <summary>
+    /// 本回合最近一次摸牌来源：普通墙头摸牌、明杠补牌、补杠补牌、暗杠补牌。
+    /// 只用于 <see cref="ScoreActionType.KongUpFlower"/> 与杠上开花承包的 payer 判定，属会话私有状态，
+    /// 不进 <see cref="GameState"/>、不进状态哈希、不进协议。
+    /// </summary>
+    private enum DrawSource : byte
+    {
+        /// <summary>普通墙头摸牌，或已出牌/碰后没有摸牌。</summary>
+        Normal = 0,
+
+        /// <summary>明杠（响应弃牌的杠）补牌。</summary>
+        KongExposed = 1,
+
+        /// <summary>补杠补牌。</summary>
+        KongSupplement = 2,
+
+        /// <summary>暗杠补牌。</summary>
+        KongConcealed = 3,
+    }
+
+    /// <summary>自己回合杠的提交结果：抢杠成立时携带赢家座位；未成立时两字段保持初值。</summary>
+    private sealed class SelfKongCommitResult
+    {
+        /// <summary>抢杠是否成立（成立时本局直接结算，补杠取消）。</summary>
+        public bool RobbingKongWon;
+
+        /// <summary>抢杠赢家座位；未成立为 <see cref="Meld.NoTargetSeat"/>。</summary>
+        public byte WinnerSeat = Meld.NoTargetSeat;
+    }
 }

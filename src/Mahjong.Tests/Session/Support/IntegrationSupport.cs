@@ -24,6 +24,22 @@ public static class IntegrationSupport
     /// <summary>物理牌总数；牌数守恒的目标值。</summary>
     public const int TotalTileCount = 136;
 
+    /// <summary>抢杠的两支位：赢家位与 payer 位。</summary>
+    private const ScoreActionType RobbingBits =
+        ScoreActionType.RobbingTheKong | ScoreActionType.RobbingTheKongPayForEveryone;
+
+    /// <summary>三种杠位：本局有杠时不做精确金额核算。</summary>
+    private const ScoreActionType KongFlags =
+        ScoreActionType.ConcealedKong | ScoreActionType.ExposedKong | ScoreActionType.KongSupplement;
+
+    /// <summary>
+    /// 每份金额：<c>(有鬼 ? 2 : 4) × (七对 ? 2 : 1) × <paramref name="perMultiplier"/></c>；
+    /// 杠上开花的乘数为 2、其余为 1。<paramref name="winnerHasJoker"/> 必须由调用方按赢家手牌显式给出，
+    /// 不由账本位反推（抢杠胡不置 <see cref="ScoreActionType.NoJoker"/>，反推会把无鬼抢杠算成有鬼）。
+    /// </summary>
+    public static int PerShare(bool winnerHasJoker, bool sevenPairs, int perMultiplier = 1) =>
+        (winnerHasJoker ? 2 : 4) * (sevenPairs ? 2 : 1) * perMultiplier;
+
     /// <summary>构造应答命令：Seq/ReceivedTick 不参与校验，统一填 0。</summary>
     public static GameCommand Command(byte seat, CommandVerb verb, long requestId, int slot = 0, ushort cardId = 0) =>
         new(0, 0, seat, verb, slot, cardId, requestId);
@@ -192,19 +208,32 @@ public static class IntegrationSupport
     }
 
     /// <summary>
-    /// 断言一局自摸结算：四座 delta 净 0；赢家局置位 SelfDrawn 且赢家金额为正；流局全 0 且动作聚合 None。
-    /// 该局没有任何杠位时按 (鬼牌?2:4) × (七对?2:1) × (杠上开花?2:1) 精确核算：三家各付一份、赢家收三份，
-    /// 再叠加结算第 2 步跟庄（赢家 ≠ 庄且变体开启）与第 3 步连庄奖励（赢家 = 庄且表值大于 0）；
-    /// 有杠位的局只做零和/符号断言（杠分改变四座分配，精确金额由 Scoring 单测覆盖）。
-    /// 变体金额与被测结算同源取自内容目录，关闭时两项都不加。
+    /// 断言一局胡牌结算：四座 delta 净 0、赢家金额为正、流局全 0 且动作聚合 None。按位分流四支：
+    /// ①抢杠（<see cref="ScoreActionType.RobbingTheKong"/> 系列，赢家不置 SelfDrawn）；
+    /// ②杠上开花承包（<see cref="ScoreActionType.KongUpFlowerPayForEveryone"/>）；
+    /// ③12 张落地承包（<see cref="ScoreActionType.TwelveCardsConceded"/>）；
+    /// ④常规自摸（历史口径，断言原样保留）。
+    /// 无杠位的局按 (鬼牌?2:4) × (七对?2:1) × (杠上开花?2:1) 精确核算三家各付/赢家收三份，
+    /// 再叠加结算第 2 步跟庄（赢家 ≠ 庄且变体开启）与第 3 步连庄奖励（赢家 = 庄且表值大于 0），
+    /// 承包支只重定向 payer、赢家金额不变；有杠位的局只做零和/符号/位集断言（杠分改变四座分配，
+    /// 精确金额由 Scoring 单测与 RobbingKongFlowTests 覆盖）。中马段按 HorseWinner 位加：命中时赢家
+    /// +3×horseBonus、其余三家各 −horseBonus（一位规则，位与金额同置）。
+    /// 变体金额与被测结算同源取自内容目录，关闭时各项都不加。
     /// </summary>
     /// <param name="round">本局结算 payload。</param>
     /// <param name="started">本局开场的 RoundStarted payload（庄家与连庄次数）。</param>
     /// <param name="variants">内容目录的规则变体。</param>
+    /// <param name="winnerHasJoker">
+    /// 赢家手牌有无鬼牌；显式给值时优先使用，不做反推。为 <c>null</c> 时：自摸/七对/12 张/杠上开花承包
+    /// 四条路径按 <see cref="ScoreActionType.NoJoker"/> 位取值（这四个记账入口按契约置/清该位，位即事实）；
+    /// 抢杠路径不置该位，故只要求结算金额落在两个合法基分（无鬼 4 / 有鬼 2，七对再 ×2）之一，
+    /// 精确基分由显式传值（或 RobbingKongFlowTests 的 K-01/K-02 与 ContractHandCalcTests）固定。
+    /// </param>
     public static void AssertSelfDrawnSettlement(
         RoundEndedPayload round,
         RoundStartedPayload started,
-        ContentVariants variants)
+        ContentVariants variants,
+        bool? winnerHasJoker = null)
     {
         ArgumentNullException.ThrowIfNull(variants);
 
@@ -219,26 +248,76 @@ public static class IntegrationSupport
             return;
         }
 
+        int winner = round.WinnerSeat;
+
+        // 抢杠：赢家笔 RobbingTheKong、payer 笔 RobbingTheKongPayForEveryone，均不置 SelfDrawn。
+        if ((round.ActionType & RobbingBits) != 0)
+        {
+            Assert.Equal(RobbingBits, round.ActionType & RobbingBits);
+            Assert.Equal(0, (int)(round.ActionType & ScoreActionType.SelfDrawn));
+            Assert.True(
+                round.ScoreDelta[winner] > 0,
+                $"抢杠赢家 {winner} 的结算金额必须为正，实际 {round.ScoreDelta[winner]}。");
+            AssertContractPayer(
+                round,
+                winner,
+                started,
+                variants,
+                contractBit: RobbingBits,
+                winnerHasJoker: winnerHasJoker);
+            return;
+        }
+
+        // 杠上开花承包：赢家仍置 SelfDrawn|KongUpFlower，放明杠者为唯一 payer。
+        if ((round.ActionType & ScoreActionType.KongUpFlowerPayForEveryone) != 0)
+        {
+            Assert.True((round.ActionType & ScoreActionType.SelfDrawn) != 0);
+            Assert.True((round.ActionType & ScoreActionType.KongUpFlower) != 0);
+            Assert.Equal(0, (int)(round.ActionType & ScoreActionType.TwelveCardsConceded));
+            AssertContractPayer(
+                round,
+                winner,
+                started,
+                variants,
+                contractBit: ScoreActionType.KongUpFlowerPayForEveryone,
+                perMultiplier: 2,
+                winnerHasJoker: winnerHasJoker);
+            return;
+        }
+
+        // 12 张落地承包：一位规则，赢家与供牌者同置 TwelveCardsConceded。
+        if ((round.ActionType & ScoreActionType.TwelveCardsConceded) != 0)
+        {
+            Assert.True((round.ActionType & ScoreActionType.SelfDrawn) != 0);
+            AssertContractPayer(
+                round,
+                winner,
+                started,
+                variants,
+                contractBit: ScoreActionType.TwelveCardsConceded,
+                perMultiplier: 1,
+                winnerHasJoker: winnerHasJoker);
+            return;
+        }
+
         Assert.True(
             (round.ActionType & ScoreActionType.SelfDrawn) != 0,
             $"赢家局 {round.WinnerSeat} 必须置位 SelfDrawn，实际 {round.ActionType}。");
-
-        int winner = round.WinnerSeat;
         Assert.True(
             round.ScoreDelta[winner] > 0,
             $"赢家 {winner} 的结算金额必须为正，实际 {round.ScoreDelta[winner]}。");
 
-        const ScoreActionType KongFlags =
-            ScoreActionType.ConcealedKong | ScoreActionType.ExposedKong | ScoreActionType.KongSupplement;
         if ((round.ActionType & KongFlags) != 0)
         {
             return;
         }
 
         bool sevenPairs = (round.ActionType & ScoreActionType.SevenPairs) != 0;
-        bool hasJoker = (round.ActionType & ScoreActionType.NoJoker) == 0;
         bool kongUpFlower = (round.ActionType & ScoreActionType.KongUpFlower) != 0;
-        int perSeat = (hasJoker ? 2 : 4) * (sevenPairs ? 2 : 1) * (kongUpFlower ? 2 : 1);
+
+        // 显式值优先；自摸路径的 NoJoker 位由 ApplySelfDrawn/ApplySevenPairsSelfDrawn 按契约置/清，可作回退。
+        bool hasJoker = winnerHasJoker ?? ((round.ActionType & ScoreActionType.NoJoker) == 0);
+        int perSeat = PerShare(hasJoker, sevenPairs, kongUpFlower ? 2 : 1);
         int[] expected = new int[GameState.PlayerCount];
         for (int seat = 0; seat < GameState.PlayerCount; seat++)
         {
@@ -265,7 +344,132 @@ public static class IntegrationSupport
             }
         }
 
+        // 结算第 4 步中马：马中才置位，置位即赢家 +3×horseBonus、其余三家各 −horseBonus。
+        if ((round.ActionType & ScoreActionType.HorseWinner) != 0)
+        {
+            Assert.True(
+                variants.HorseBonus > 0,
+                $"变体关闭（horseBonus={variants.HorseBonus}）时不得置 HorseWinner 位。");
+            for (int seat = 0; seat < GameState.PlayerCount; seat++)
+            {
+                expected[seat] = seat == winner
+                    ? expected[seat] + (3 * variants.HorseBonus)
+                    : expected[seat] - variants.HorseBonus;
+            }
+        }
+
         Assert.Equal(expected, round.ScoreDelta);
+    }
+
+    /// <summary>
+    /// 承包局的 payer 核算：赢家收 3 份（每份 = 基分 × <paramref name="perMultiplier"/>），payer 付 3 份，
+    /// 其余两座 0，再按结算第 2/3 步叠加跟庄或连庄、按第 4 步叠加中马
+    /// （<see cref="ScoreActionType.HorseWinner"/> 置位时赢家 +3×horseBonus、其余三家各 −horseBonus）。
+    /// 有杠位的局只做结构断言（杠分改变四座分配，精确金额由流程组用例覆盖），但位与变体开关仍校验。
+    /// payer 未知，因此对三个候选座位各算一次期望，要求恰好一个与实测 delta 相等；
+    /// 承包 + 马命中组合因此必须同时满足承包三段与马支付，不能靠提前 return 跳过。
+    /// </summary>
+    private static void AssertContractPayer(
+        RoundEndedPayload round,
+        int winner,
+        RoundStartedPayload started,
+        ContentVariants variants,
+        ScoreActionType contractBit,
+        int perMultiplier = 1,
+        bool? winnerHasJoker = null)
+    {
+        Assert.NotEqual(0, (int)(round.ActionType & contractBit));
+
+        // 位与开关一致：马中才置位，置位时 horseBonus 必须为正（关闭时置位即违约）。
+        bool horseHit = (round.ActionType & ScoreActionType.HorseWinner) != 0;
+        if (horseHit)
+        {
+            Assert.True(
+                variants.HorseBonus > 0,
+                $"变体关闭（horseBonus={variants.HorseBonus}）时不得置 HorseWinner 位。");
+        }
+
+        if ((round.ActionType & KongFlags) != 0)
+        {
+            return;
+        }
+
+        bool sevenPairs = (round.ActionType & ScoreActionType.SevenPairs) != 0;
+        int[] actual = round.ScoreDelta;
+
+        int matches = 0;
+        foreach (int per in CandidateShares(round, sevenPairs, perMultiplier, winnerHasJoker))
+        {
+            for (byte payer = 0; payer < GameState.PlayerCount; payer++)
+            {
+                if (payer == winner)
+                {
+                    continue;
+                }
+
+                int[] expected = new int[GameState.PlayerCount];
+                expected[winner] = per * 3;
+                expected[payer] = -per * 3;
+                if (winner != started.BankerSeat && variants.FollowingBanker > 0)
+                {
+                    expected[winner] += variants.FollowingBanker;
+                    expected[started.BankerSeat] -= variants.FollowingBanker;
+                }
+                else if (winner == started.BankerSeat)
+                {
+                    int bonus = DealerStreakBonus(variants.DealerStreakBonus, started.DealerStreak);
+                    for (byte seat = 0; bonus > 0 && seat < GameState.PlayerCount; seat++)
+                    {
+                        expected[seat] = seat == started.BankerSeat ? expected[seat] + (3 * bonus) : expected[seat] - bonus;
+                    }
+                }
+
+                if (horseHit)
+                {
+                    for (byte seat = 0; seat < GameState.PlayerCount; seat++)
+                    {
+                        expected[seat] = seat == winner
+                            ? expected[seat] + (3 * variants.HorseBonus)
+                            : expected[seat] - variants.HorseBonus;
+                    }
+                }
+
+                if (expected.SequenceEqual(actual))
+                {
+                    matches++;
+                }
+            }
+        }
+
+        Assert.Equal(1, matches);
+    }
+
+    /// <summary>
+    /// 承包支允许的每份金额候选：显式有无鬼时只有一个；抢杠分支缺显式值时两种基分都合法
+    /// （该路径不置 <see cref="ScoreActionType.NoJoker"/>，事件流无法区分有无鬼，不得反推）；
+    /// 其余分支按 NoJoker 位取（记账入口按契约置/清该位）。
+    /// </summary>
+    private static IReadOnlyList<int> CandidateShares(
+        RoundEndedPayload round,
+        bool sevenPairs,
+        int perMultiplier,
+        bool? winnerHasJoker)
+    {
+        if (winnerHasJoker is bool explicitJoker)
+        {
+            return [PerShare(explicitJoker, sevenPairs, perMultiplier)];
+        }
+
+        if ((round.ActionType & RobbingBits) != 0)
+        {
+            return
+            [
+                PerShare(winnerHasJoker: true, sevenPairs, perMultiplier),
+                PerShare(winnerHasJoker: false, sevenPairs, perMultiplier),
+            ];
+        }
+
+        return [PerShare((round.ActionType & ScoreActionType.NoJoker) == 0, sevenPairs, perMultiplier)];
     }
 
     /// <summary>连庄奖励表取值：<c>table[min(streak, 表长) - 1]</c>；空表（变体关闭）为 0。</summary>

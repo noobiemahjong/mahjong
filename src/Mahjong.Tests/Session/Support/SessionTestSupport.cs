@@ -48,10 +48,10 @@ public static class SessionTestSupport
     /// <summary>局面状态哈希（64 字符小写 hex）。</summary>
     public static string Hash(GameSession session) => StateHash.Compute(session.State);
 
-    /// <summary>牌数守恒检查：牌墙 + 四家手牌 + 弃牌 + 副露牌 = 136（发牌后）。</summary>
+    /// <summary>牌数守恒检查：牌墙 + 公共揭示区 + 四家手牌 + 弃牌 + 副露牌 = 136（发牌后）。</summary>
     public static int CountTiles(GameState state)
     {
-        int total = state.Wall.Count;
+        int total = state.Wall.Count + state.Revealed.Count;
         foreach (PlayerState player in state.Players)
         {
             total += player.Hand.Count + player.Discards.Count;

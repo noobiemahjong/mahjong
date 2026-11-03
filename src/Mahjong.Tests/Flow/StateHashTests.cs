@@ -7,18 +7,26 @@ using Xunit;
 namespace Mahjong.Tests.Flow;
 
 /// <summary>
-/// StateHash 契约：SHA-256 小写 hex；布局版本 2（单牌墙，无牌尾段）；
+/// StateHash 契约：SHA-256 小写 hex；布局版本 3（牌墙后追加公共揭示区段）；
 /// 默认空局与含牌墙/副露（碰 + 补杠 + opened:false 暗杠）/弃牌/分数的局面各有字面金标；
 /// 期望字节由测试内独立按布局规格手工拼出（<see cref="StateHashOracle"/>），不使用生产代码的写字节逻辑。
 /// </summary>
 public sealed class StateHashTests
 {
-    /// <summary>默认空 GameState 的 SHA-256 金标（布局 v2：version 2、空牌墙、全零计数、currentSeat 0、roundNo 1）。</summary>
+    /// <summary>默认空 GameState 的 SHA-256 金标（布局 v3：version 3、空牌墙、空揭示区、全零计数、currentSeat 0、roundNo 1），53 字节。</summary>
     private const string EmptyStateHashHex =
+        "4f3948a487ab7c2311a2d0d04720b39911f7afdf4b22b098796cc75f655dac05";
+
+    /// <summary>含牌墙/副露（碰、补杠、opened:false 暗杠）/弃牌/分数的局面金标（布局 v3，113 字节）。</summary>
+    private const string RichStateHashHex =
+        "5d4c1af028100b249f80eb14823346df3ccf4c00c19baf1cd33759a28957ab2a";
+
+    /// <summary>布局 v2 的空局金标，仅作对照：v3 布局下不再产出该值（旧值不删）。</summary>
+    private const string LegacyV2EmptyStateHashHex =
         "9233ee2f05f8fb737c69c9d271c7ad741cf3e708eef1cc17931597a31e847b6b";
 
-    /// <summary>含牌墙/副露（碰、补杠、opened:false 暗杠）/弃牌/分数的局面金标。</summary>
-    private const string RichStateHashHex =
+    /// <summary>布局 v2 的富局面金标，仅作对照：v3 布局下不再产出该值（旧值不删）。</summary>
+    private const string LegacyV2RichStateHashHex =
         "fc85d25e85af156153c4afab3da475e1f186a31310078bec7131eaddd623edc2";
 
     [Fact]
@@ -50,18 +58,51 @@ public sealed class StateHashTests
     }
 
     [Fact]
-    public void Layout_UsesVersion2AndHasNoWallTailSegment()
+    public void Layout_UsesVersion3AndIncludesRevealedSegment()
     {
         byte[] empty = StateHashOracle.BuildExpectedBytes(new GameState());
 
-        Assert.Equal(2, StateHashOracle.LayoutVersion);
-        Assert.Equal(2, empty[0]);
+        Assert.Equal(3, StateHashOracle.LayoutVersion);
+        Assert.Equal(3, empty[0]);
 
-        // 空局字节数：version 1 + 牌墙 2 + 玩家数 1 + 四家 × 11 + currentSeat 1 + roundNo 2 = 51，无牌尾段。
-        Assert.Equal(51, empty.Length);
+        // 空局字节数：version 1 + 牌墙 2 + 揭示区 2 + 玩家数 1 + 四家 × 11 + currentSeat 1 + roundNo 2 = 53。
+        Assert.Equal(53, empty.Length);
 
-        // 含牌墙 3 张与三副露的富局面：111 字节，同样无牌尾段。
-        Assert.Equal(111, StateHashOracle.BuildExpectedBytes(CreateRichState()).Length);
+        // 含牌墙 3 张与三副露的富局面：113 字节（揭示区为空仍占 2 字节计数）。
+        Assert.Equal(113, StateHashOracle.BuildExpectedBytes(CreateRichState()).Length);
+    }
+
+    [Fact]
+    public void Layout_RevealedSegmentSitsRightAfterWall()
+    {
+        var state = new GameState();
+        state.Wall.Append(RulesTestData.FromId(31));
+        byte[] before = StateHashOracle.BuildExpectedBytes(state);
+
+        state.Revealed.Append(RulesTestData.FromId(71));
+        byte[] after = StateHashOracle.BuildExpectedBytes(state);
+
+        // 字节序：version(0) → 牌墙计数 [1..2] → 牌墙 id [3..4] → 揭示区计数 [5..6] → 揭示区 id [7..8]。
+        Assert.Equal(31, after[3] | (after[4] << 8));
+        Assert.Equal(1, after[5] | (after[6] << 8));
+        Assert.Equal(71, after[7] | (after[8] << 8));
+        Assert.Equal(before.Length + 2, after.Length);
+
+        // 揭示区为空与非空是不同哈希，且两者都与独立 oracle 一致。
+        GameState withRevealed = state;
+        var onlyWall = new GameState();
+        onlyWall.Wall.Append(RulesTestData.FromId(31));
+        Assert.NotEqual(StateHash.Compute(onlyWall), StateHash.Compute(withRevealed));
+        Assert.Equal(StateHashOracle.ComputeExpectedHex(withRevealed), StateHash.Compute(withRevealed));
+        Assert.Equal(StateHashOracle.ComputeExpectedHex(onlyWall), StateHash.Compute(onlyWall));
+    }
+
+    [Fact]
+    public void Layout_V3GoldenValuesDifferFromLegacyV2()
+    {
+        // 旧值保留作对照：布局 v3 下两条 v2 金标都不再产出（断言只增不减）。
+        Assert.NotEqual(LegacyV2EmptyStateHashHex, StateHash.Compute(new GameState()));
+        Assert.NotEqual(LegacyV2RichStateHashHex, StateHash.Compute(CreateRichState()));
     }
 
     [Fact]

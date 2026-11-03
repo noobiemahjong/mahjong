@@ -385,6 +385,13 @@ public partial class LocalGame : Control
                     break;
                 }
 
+                case SessionEventKind.HorseRevealed:
+                {
+                    HorseRevealedPayload payload = SessionEventPayloadReader.ReadHorseRevealed(sessionEvent);
+                    _lastAction = $"翻马：{RelativeName(payload.HorseSeat)} {TileLabel(payload.TileId)}";
+                    break;
+                }
+
                 case SessionEventKind.RoundEnded:
                     roundResult = SessionEventPayloadReader.ReadRoundEnded(sessionEvent);
                     _finishedRoundNo = _currentRoundNo;
@@ -642,6 +649,11 @@ public partial class LocalGame : Control
         if ((type & ScoreActionType.NoJoker) != 0) parts.Add("无鬼");
         if ((type & ScoreActionType.DealerStreak) != 0) parts.Add("连庄");
         if ((type & ScoreActionType.FollowingTheBanker) != 0) parts.Add("跟庄");
+        if ((type & ScoreActionType.HorseWinner) != 0) parts.Add("中马");
+        if ((type & ScoreActionType.RobbingTheKong) != 0) parts.Add("抢杠");
+        if ((type & ScoreActionType.RobbingTheKongPayForEveryone) != 0) parts.Add("抢杠包三家");
+        if ((type & ScoreActionType.KongUpFlowerPayForEveryone) != 0) parts.Add("杠上开花包三家");
+        if ((type & ScoreActionType.TwelveCardsConceded) != 0) parts.Add("12 张包三家");
         return string.Join("、", parts);
     }
 }

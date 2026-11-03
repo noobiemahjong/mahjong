@@ -225,6 +225,19 @@ internal sealed class SessionEventBuffer
             State = state,
         });
 
+    /// <summary>记录翻马事件；公开事件，编码不按 viewer 过滤。</summary>
+    /// <param name="tick">产出 tick。</param>
+    /// <param name="horseSeat">马牌座位 0–3。</param>
+    /// <param name="tileId">马牌的物理牌 id 1–136。</param>
+    public void EmitHorseRevealed(long tick, byte horseSeat, ushort tileId) =>
+        Add(new PendingEvent
+        {
+            Kind = SessionEventKind.HorseRevealed,
+            Tick = tick,
+            Seat = horseSeat,
+            TileId16 = tileId,
+        });
+
     /// <summary>
     /// 破坏性读取：把当前全部事件按 viewer 编码成 payload 并清空缓冲；空缓冲返回空列表。
     /// </summary>
@@ -279,6 +292,7 @@ internal sealed class SessionEventBuffer
         SessionEventKind.RoundEnded => EncodeRoundEnded(pending),
         SessionEventKind.GameEnded => EncodeGameEnded(pending),
         SessionEventKind.SeatStateChanged => EncodeSeatStateChanged(pending),
+        SessionEventKind.HorseRevealed => EncodeHorseRevealed(pending),
         _ => throw new InvalidOperationException($"未定义的事件种类 {pending.Kind}。"),
     };
 
@@ -422,6 +436,15 @@ internal sealed class SessionEventBuffer
     }
 
     private static byte[] EncodeSeatStateChanged(PendingEvent pending) => [pending.Seat, pending.State];
+
+    /// <summary>翻马载荷 3 字节：horseSeat u8 + tileId u16 小端，字段紧排无对齐。</summary>
+    private static byte[] EncodeHorseRevealed(PendingEvent pending)
+    {
+        byte[] payload = new byte[3];
+        payload[0] = pending.Seat;
+        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(1, 2), pending.TileId16);
+        return payload;
+    }
 
     private static ushort[] CopyTileIds(IReadOnlyList<Tile> tiles)
     {
